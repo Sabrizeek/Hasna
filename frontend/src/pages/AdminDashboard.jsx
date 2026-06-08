@@ -3,39 +3,19 @@ import AdminLayout from "../components/AdminLayout.jsx";
 import api from "../api/axios.js";
 
 const AdminDashboard = () => {
-  const [stats, setStats] = useState({
-    totalUsers: 0,
-    pendingAccounts: 0,
-    totalDepartments: 0,
-    totalCourses: 0,
-    activeSemester: "None",
-    totalAnnouncements: 0,
+  const [data, setData] = useState({
+    stats: {},
+    recentReports: [],
+    recentActivity: [],
   });
 
   useEffect(() => {
     const loadStats = async () => {
       try {
-        const [usersRes, departmentsRes, coursesRes, semestersRes, announcementsRes] = await Promise.all([
-          api.get("/admin/users"),
-          api.get("/departments"),
-          api.get("/courses"),
-          api.get("/semesters"),
-          api.get("/announcements"),
-        ]);
-
-        const semesters = semestersRes.data.semesters || [];
-        const activeSemester = semesters.find((semester) => Number(semester.is_active) === 1);
-
-        setStats({
-          totalUsers: usersRes.data.users?.length || 0,
-          pendingAccounts: usersRes.data.users?.filter((user) => user.status === "pending").length || 0,
-          totalDepartments: departmentsRes.data.departments?.length || 0,
-          totalCourses: coursesRes.data.courses?.length || 0,
-          activeSemester: activeSemester ? `${activeSemester.semester_name} (${activeSemester.academic_year})` : "None",
-          totalAnnouncements: announcementsRes.data.announcements?.length || 0,
-        });
+        const response = await api.get("/admin/dashboard-stats");
+        setData(response.data);
       } catch (error) {
-        setStats((current) => ({ ...current }));
+        setData((current) => current);
       }
     };
 
@@ -43,12 +23,12 @@ const AdminDashboard = () => {
   }, []);
 
   const cards = [
-    { label: "Total Users", value: stats.totalUsers },
-    { label: "Pending Accounts", value: stats.pendingAccounts },
-    { label: "Total Departments", value: stats.totalDepartments },
-    { label: "Total Courses", value: stats.totalCourses },
-    { label: "Active Semester", value: stats.activeSemester },
-    { label: "Total Announcements", value: stats.totalAnnouncements },
+    { label: "Total Students", value: data.stats.totalStudents || 0 },
+    { label: "Total Lecturers", value: data.stats.totalLecturers || 0 },
+    { label: "Total HoDs", value: data.stats.totalHoDs || 0 },
+    { label: "Total Submissions", value: data.stats.totalSubmissions || 0 },
+    { label: "Active Evaluation Windows", value: data.stats.activeEvaluationWindows || 0 },
+    { label: "Pending Supervision Reports", value: data.stats.pendingSupervisionReports || 0 },
   ];
 
   return (
@@ -61,11 +41,30 @@ const AdminDashboard = () => {
           </div>
         ))}
       </div>
-      <div className="mt-8 rounded-3xl border border-slate-200 bg-white p-6">
-        <h3 className="text-xl font-bold text-brandBlue">Admin foundation ready</h3>
-        <p className="mt-3 text-sm leading-7 text-slate-600">
-          Use the sidebar to approve new users, manage departments, assign courses, set semesters, and publish announcements.
-        </p>
+
+      <div className="mt-8 grid gap-6 xl:grid-cols-2">
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h3 className="text-xl font-bold text-brandBlue">Recent Reports</h3>
+          <div className="mt-4 space-y-3">
+            {data.recentReports.length === 0 ? <p className="text-sm text-slate-500">No reports yet.</p> : data.recentReports.map((report) => (
+              <div key={report.id} className="rounded-2xl bg-slate-50 p-4 text-sm">
+                <p className="font-semibold text-slate-900">{report.title}</p>
+                <p className="mt-1 text-slate-600">{report.lecturer_name} - {report.status}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <h3 className="text-xl font-bold text-brandBlue">Recent Activity</h3>
+          <div className="mt-4 space-y-3">
+            {data.recentActivity.length === 0 ? <p className="text-sm text-slate-500">No activity yet.</p> : data.recentActivity.map((activity) => (
+              <div key={activity.id} className="rounded-2xl bg-slate-50 p-4 text-sm">
+                <p className="font-semibold text-slate-900">{activity.action}</p>
+                <p className="mt-1 text-slate-600">{activity.user_name || "System"} - {new Date(activity.created_at).toLocaleString()}</p>
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </AdminLayout>
   );

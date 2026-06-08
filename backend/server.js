@@ -8,8 +8,16 @@ import departmentRoutes from "./routes/departmentRoutes.js";
 import courseRoutes from "./routes/courseRoutes.js";
 import semesterRoutes from "./routes/semesterRoutes.js";
 import announcementRoutes from "./routes/announcementRoutes.js";
+import studentRoutes from "./routes/studentRoutes.js";
+import questionRoutes from "./routes/questionRoutes.js";
+import lecturerRoutes from "./routes/lecturerRoutes.js";
+import hodRoutes from "./routes/hodRoutes.js";
+import deanRoutes from "./routes/deanRoutes.js";
+import { downloadSupervisionTemplate } from "./controllers/lecturerController.js";
 import { query } from "./config/db.js";
 import { initializeDatabase } from "./config/initDatabase.js";
+import { sendError } from "./utils/apiResponse.js";
+import { ensureUploadDirectories } from "./utils/uploadDirectories.js";
 
 dotenv.config();
 
@@ -33,21 +41,31 @@ app.use("/api/departments", departmentRoutes);
 app.use("/api/courses", courseRoutes);
 app.use("/api/semesters", semesterRoutes);
 app.use("/api/announcements", announcementRoutes);
+app.use("/api/student", studentRoutes);
+app.use("/api/questions", questionRoutes);
+app.use("/api/lecturer", lecturerRoutes);
+app.use("/api/hod", hodRoutes);
+app.use("/api/dean", deanRoutes);
+app.get("/api/supervision-template", downloadSupervisionTemplate);
 
 app.use((req, res) => {
-  res.status(404).json({ message: "Route not found." });
+  sendError(res, "Route not found.", 404);
 });
 
 app.use((err, req, res, next) => {
   console.error(err);
-  res.status(err.status || 500).json({
-    message: err.message || "Internal server error.",
-  });
+  if (err.name === "MulterError") {
+    const message = err.code === "LIMIT_FILE_SIZE" ? "Report file must be 10MB or smaller." : err.message;
+    return sendError(res, message, 400);
+  }
+
+  sendError(res, err.message || "Internal server error.", err.status || 500);
 });
 
 const startServer = async () => {
   try {
     await initializeDatabase();
+    await ensureUploadDirectories();
     await query("SELECT 1 AS ok");
     app.listen(port, () => {
       console.log(`Server running on port ${port}`);

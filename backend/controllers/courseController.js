@@ -1,4 +1,5 @@
 import { query } from "../config/db.js";
+import { logAudit } from "../utils/auditLogger.js";
 
 export const createCourse = async (req, res) => {
   try {
@@ -13,6 +14,7 @@ export const createCourse = async (req, res) => {
       [course_code, course_name, department_id, lecturer_id || null, semester_id]
     );
 
+    await logAudit({ userId: req.user?.id, action: "course_created", entityType: "course", entityId: result.insertId, details: { course_code, course_name, department_id, lecturer_id, semester_id } });
     res.status(201).json({ message: "Course created successfully.", courseId: result.insertId });
   } catch (error) {
     res.status(500).json({ message: "Failed to create course.", error: error.message });
@@ -73,6 +75,7 @@ export const updateCourse = async (req, res) => {
       return res.status(404).json({ message: "Course not found." });
     }
 
+    await logAudit({ userId: req.user?.id, action: "course_updated", entityType: "course", entityId: Number(id), details: { course_code, course_name, department_id, lecturer_id, semester_id } });
     res.json({ message: "Course updated successfully." });
   } catch (error) {
     res.status(500).json({ message: "Failed to update course.", error: error.message });
@@ -88,6 +91,7 @@ export const deleteCourse = async (req, res) => {
       return res.status(404).json({ message: "Course not found." });
     }
 
+    await logAudit({ userId: req.user?.id, action: "course_deleted", entityType: "course", entityId: Number(id) });
     res.json({ message: "Course deleted successfully." });
   } catch (error) {
     res.status(500).json({ message: "Failed to delete course.", error: error.message });

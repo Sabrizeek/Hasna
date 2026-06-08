@@ -8,12 +8,25 @@ import PendingUsers from "./pages/PendingUsers.jsx";
 import UserManagement from "./pages/UserManagement.jsx";
 import DepartmentManagement from "./pages/DepartmentManagement.jsx";
 import CourseManagement from "./pages/CourseManagement.jsx";
+import ModuleAssignmentManagement from "./pages/ModuleAssignmentManagement.jsx";
 import SemesterManagement from "./pages/SemesterManagement.jsx";
+import EvaluationWindowManagement from "./pages/EvaluationWindowManagement.jsx";
 import AnnouncementManagement from "./pages/AnnouncementManagement.jsx";
+import AdminReportsAudit from "./pages/AdminReportsAudit.jsx";
 import StudentDashboard from "./pages/StudentDashboard.jsx";
+import LecturerSelection from "./pages/LecturerSelection.jsx";
+import LecturerProfile from "./pages/LecturerProfile.jsx";
+import EvaluationTypeSelection from "./pages/EvaluationTypeSelection.jsx";
+import TheoryQuestionnaire from "./pages/TheoryQuestionnaire.jsx";
+import PracticalQuestionnaire from "./pages/PracticalQuestionnaire.jsx";
+import EvaluationThankYou from "./pages/EvaluationThankYou.jsx";
 import LecturerDashboard from "./pages/LecturerDashboard.jsx";
+import LecturerEvaluationResults from "./pages/LecturerEvaluationResults.jsx";
+import LecturerSupervisionReports from "./pages/LecturerSupervisionReports.jsx";
 import HoDDashboard from "./pages/HoDDashboard.jsx";
+import HoDLecturerDetail from "./pages/HoDLecturerDetail.jsx";
 import DeanDashboard from "./pages/DeanDashboard.jsx";
+import DeanDepartmentDetail from "./pages/DeanDepartmentDetail.jsx";
 
 const App = () => {
   return (
@@ -28,24 +41,38 @@ const App = () => {
         <Route path="/admin/users" element={<UserManagement />} />
         <Route path="/admin/departments" element={<DepartmentManagement />} />
         <Route path="/admin/courses" element={<CourseManagement />} />
+        <Route path="/admin/module-assignments" element={<ModuleAssignmentManagement />} />
         <Route path="/admin/semesters" element={<SemesterManagement />} />
+        <Route path="/admin/evaluation-windows" element={<EvaluationWindowManagement />} />
         <Route path="/admin/announcements" element={<AnnouncementManagement />} />
+        <Route path="/admin/reports-audit" element={<AdminReportsAudit />} />
       </Route>
 
       <Route element={<ProtectedRoute roles={["student"]} />}>
         <Route path="/student/dashboard" element={<StudentDashboard />} />
+        <Route path="/student/courses/:courseId/lecturers" element={<LecturerSelection />} />
+        <Route path="/student/lecturers/:lecturerId/profile" element={<LecturerProfile />} />
+        <Route path="/student/evaluation-type" element={<EvaluationTypeSelection />} />
+        <Route path="/student/questionnaire/theory" element={<TheoryQuestionnaire />} />
+        <Route path="/student/questionnaire/practical" element={<PracticalQuestionnaire />} />
+        <Route path="/student/evaluation/thank-you" element={<EvaluationThankYou />} />
       </Route>
 
       <Route element={<ProtectedRoute roles={["lecturer"]} />}>
         <Route path="/lecturer/dashboard" element={<LecturerDashboard />} />
+        <Route path="/lecturer/evaluation-results/:courseId" element={<LecturerEvaluationResults />} />
+        <Route path="/lecturer/supervision-reports" element={<LecturerSupervisionReports />} />
       </Route>
 
       <Route element={<ProtectedRoute roles={["hod"]} />}>
         <Route path="/hod/dashboard" element={<HoDDashboard />} />
+        <Route path="/hod/lecturers/:lecturerId" element={<HoDLecturerDetail />} />
       </Route>
 
       <Route element={<ProtectedRoute roles={["dean"]} />}>
         <Route path="/dean/dashboard" element={<DeanDashboard />} />
+        <Route path="/dean/departments/:departmentId" element={<DeanDepartmentDetail />} />
+        <Route path="/dean/lecturers/:lecturerId" element={<HoDLecturerDetail />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
