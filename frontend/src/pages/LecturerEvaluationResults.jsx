@@ -198,6 +198,35 @@ const LecturerEvaluationResults = () => {
                     <DistributionLegend distribution={results.overallGradeDistribution} percentages={overallPercentages} />
                   </div>
                 </div>
+
+                <div className="mt-8 rounded-3xl border border-slate-200 bg-white p-5">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h3 className="text-xl font-bold text-slate-950">Anonymous Student Comments</h3>
+                      <p className="mt-1 text-sm text-slate-500">Student identities are hidden in lecturer reports.</p>
+                    </div>
+                    <span className="rounded-full bg-sky-50 px-4 py-2 text-sm font-bold text-sky-700">
+                      {results.comments?.length || 0} comments
+                    </span>
+                  </div>
+
+                  {!results.comments || results.comments.length === 0 ? (
+                    <div className="mt-5 rounded-2xl border border-amber-100 bg-amber-50 p-5 text-sm font-medium text-amber-800">
+                      No written comments have been submitted for this module and evaluation type yet.
+                    </div>
+                  ) : (
+                    <div className="mt-5 grid gap-3">
+                      {results.comments.map((comment, index) => (
+                        <article key={`${comment.submittedAt}-${index}`} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                          <p className="whitespace-pre-wrap text-sm leading-6 text-slate-700">{comment.commentText}</p>
+                          <p className="mt-3 text-xs font-semibold text-slate-400">
+                            Submitted {new Date(comment.submittedAt).toLocaleString()}
+                          </p>
+                        </article>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </>
             )}
           </>

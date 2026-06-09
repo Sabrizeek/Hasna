@@ -819,12 +819,9 @@ const seedDemoUsersAndCourses = async () => {
        ON DUPLICATE KEY UPDATE
          university_id = COALESCE(university_id, VALUES(university_id)),
          full_name = VALUES(full_name),
-         password = VALUES(password),
          role = VALUES(role),
          status = 'approved',
-         department_id = VALUES(department_id),
-         first_login = 1,
-         must_change_password = 1`,
+         department_id = VALUES(department_id)`,
       [user.university_id, user.full_name, user.email, hashedPassword, user.role, departmentId]
     );
 
@@ -987,6 +984,34 @@ const seedDemoNotifications = async () => {
   }
 };
 
+const repairChangedPasswordFlags = async () => {
+  const defaultPasswords = [...new Set([demoPassword, defaultAdmin.password].filter(Boolean))];
+  const [users] = await query(
+    `SELECT id, password
+     FROM users
+     WHERE deleted_at IS NULL
+       AND status = 'approved'
+       AND must_change_password = 1`
+  );
+
+  for (const user of users) {
+    let usesDefaultPassword = false;
+    for (const defaultPassword of defaultPasswords) {
+      if (await bcrypt.compare(defaultPassword, user.password)) {
+        usesDefaultPassword = true;
+        break;
+      }
+    }
+
+    if (!usesDefaultPassword) {
+      await query(
+        "UPDATE users SET first_login = 0, must_change_password = 0 WHERE id = ?",
+        [user.id]
+      );
+    }
+  }
+};
+
 const backfillMissingUniversityIds = async () => {
   const prefixes = {
     student: "SCI2026",
@@ -1059,15 +1084,11 @@ export const initializeDatabase = async () => {
       [defaultAdmin.university_id, defaultAdmin.full_name, defaultAdmin.email, hashedPassword, defaultAdmin.department_id]
     );
   } else {
-    const hashedPassword = await bcrypt.hash(defaultAdmin.password, 10);
     await query(
       `UPDATE users
-       SET university_id = COALESCE(university_id, ?),
-           password = ?,
-           first_login = 0,
-           must_change_password = 0
+       SET university_id = COALESCE(university_id, ?)
        WHERE email = ?`,
-      [defaultAdmin.university_id, hashedPassword, defaultAdmin.email]
+      [defaultAdmin.university_id, defaultAdmin.email]
     );
   }
 
@@ -1075,4 +1096,5 @@ export const initializeDatabase = async () => {
   await backfillMissingUniversityIds();
   await seedDemoEvaluationSubmissions();
   await seedDemoNotifications();
+  await repairChangedPasswordFlags();
 };

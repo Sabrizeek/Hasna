@@ -93,7 +93,7 @@ export const getEvaluationResults = async (req, res) => {
     }
 
     const [submissionRows] = await query(
-      `SELECT id, overall_grade
+      `SELECT id, overall_grade, comment_text, submitted_at
        FROM evaluation_submissions
        WHERE lecturer_id = ? AND course_id = ? AND semester_id = ? AND academic_year = ? AND type = ?`,
       [lecturerId, courseId, semesterId, academicYear, type]
@@ -156,6 +156,12 @@ export const getEvaluationResults = async (req, res) => {
       academicYear,
       type,
       totalResponses,
+      comments: submissionRows
+        .filter((submission) => submission.comment_text?.trim())
+        .map((submission) => ({
+          commentText: submission.comment_text,
+          submittedAt: submission.submitted_at,
+        })),
       questions: questions.map((question) => {
         const distribution = questionDistributions.get(question.id) || emptyDistribution();
         return {
