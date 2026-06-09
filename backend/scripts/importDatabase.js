@@ -3,6 +3,7 @@ import path from "path";
 import { spawn } from "child_process";
 import dotenv from "dotenv";
 import mysql from "mysql2/promise";
+import { findMysqlExecutable } from "./mysqlCli.js";
 
 dotenv.config();
 
@@ -14,6 +15,7 @@ const {
   DB_USER,
   DB_PASSWORD = "",
   DB_NAME,
+  MYSQL_PATH,
 } = process.env;
 
 if (!DB_USER || !DB_NAME) {
@@ -57,7 +59,9 @@ const args = [
   DB_NAME,
 ];
 
-const restore = spawn("mysql", args, {
+const mysqlPath = findMysqlExecutable("mysql", MYSQL_PATH);
+
+const restore = spawn(mysqlPath, args, {
   env: { ...process.env, MYSQL_PWD: DB_PASSWORD },
   stdio: ["pipe", "inherit", "pipe"],
 });
@@ -69,7 +73,9 @@ restore.stderr.on("data", (data) => {
 });
 
 restore.on("error", (error) => {
-  console.error("Failed to start mysql. Make sure MySQL bin tools are installed and available in PATH.");
+  console.error("Failed to start mysql.");
+  console.error("Set MYSQL_BIN_DIR or MYSQL_PATH in backend/.env, or add the MySQL bin folder to PATH.");
+  console.error("Example: MYSQL_BIN_DIR=C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin");
   console.error(error.message);
   process.exit(1);
 });

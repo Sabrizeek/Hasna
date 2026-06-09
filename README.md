@@ -125,6 +125,14 @@ npm run dev
 
 The import script uses `backend/.env`, so your friend must set their own local MySQL `DB_HOST`, `DB_USER`, `DB_PASSWORD`, and `DB_NAME` first. MySQL command-line tools must also be available in PATH.
 
+On Windows, if `npm run db:export` says `spawn mysqldump ENOENT`, add your MySQL bin folder to `backend/.env`:
+
+```env
+MYSQL_BIN_DIR=C:\Program Files\MySQL\MySQL Server 8.0\bin
+```
+
+If your MySQL version folder is different, use that folder name. You can also set exact executable paths with `MYSQLDUMP_PATH` and `MYSQL_PATH`.
+
 If you need uploaded profile photos or supervision report files, copy `backend/uploads/` too.
 
 ## Demo Credentials
