@@ -2,13 +2,17 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import LandingPage from "./pages/LandingPage.jsx";
 import Login from "./pages/Login.jsx";
-import Register from "./pages/Register.jsx";
+import ForgotPassword from "./pages/ForgotPassword.jsx";
+import ChangePassword from "./pages/ChangePassword.jsx";
+import ProfileSettings from "./pages/ProfileSettings.jsx";
+import NotificationsPage from "./pages/NotificationsPage.jsx";
 import AdminDashboard from "./pages/AdminDashboard.jsx";
 import PendingUsers from "./pages/PendingUsers.jsx";
 import UserManagement from "./pages/UserManagement.jsx";
 import DepartmentManagement from "./pages/DepartmentManagement.jsx";
 import CourseManagement from "./pages/CourseManagement.jsx";
 import ModuleAssignmentManagement from "./pages/ModuleAssignmentManagement.jsx";
+import AdminAwardScores from "./pages/AdminAwardScores.jsx";
 import SemesterManagement from "./pages/SemesterManagement.jsx";
 import EvaluationWindowManagement from "./pages/EvaluationWindowManagement.jsx";
 import AnnouncementManagement from "./pages/AnnouncementManagement.jsx";
@@ -33,7 +37,12 @@ const App = () => {
     <Routes>
       <Route path="/" element={<LandingPage />} />
       <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/register" element={<Navigate to="/login" replace />} />
+      <Route element={<ProtectedRoute />}>
+        <Route path="/change-password" element={<ChangePassword />} />
+        <Route path="/notifications" element={<NotificationsPage />} />
+      </Route>
 
       <Route element={<ProtectedRoute roles={["admin"]} />}>
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
@@ -42,10 +51,12 @@ const App = () => {
         <Route path="/admin/departments" element={<DepartmentManagement />} />
         <Route path="/admin/courses" element={<CourseManagement />} />
         <Route path="/admin/module-assignments" element={<ModuleAssignmentManagement />} />
+        <Route path="/admin/award-scores" element={<AdminAwardScores />} />
         <Route path="/admin/semesters" element={<SemesterManagement />} />
         <Route path="/admin/evaluation-windows" element={<EvaluationWindowManagement />} />
         <Route path="/admin/announcements" element={<AnnouncementManagement />} />
         <Route path="/admin/reports-audit" element={<AdminReportsAudit />} />
+        <Route path="/admin/profile" element={<ProfileSettings />} />
       </Route>
 
       <Route element={<ProtectedRoute roles={["student"]} />}>
@@ -56,23 +67,27 @@ const App = () => {
         <Route path="/student/questionnaire/theory" element={<TheoryQuestionnaire />} />
         <Route path="/student/questionnaire/practical" element={<PracticalQuestionnaire />} />
         <Route path="/student/evaluation/thank-you" element={<EvaluationThankYou />} />
+        <Route path="/student/profile" element={<ProfileSettings />} />
       </Route>
 
       <Route element={<ProtectedRoute roles={["lecturer"]} />}>
         <Route path="/lecturer/dashboard" element={<LecturerDashboard />} />
         <Route path="/lecturer/evaluation-results/:courseId" element={<LecturerEvaluationResults />} />
         <Route path="/lecturer/supervision-reports" element={<LecturerSupervisionReports />} />
+        <Route path="/lecturer/profile" element={<ProfileSettings />} />
       </Route>
 
       <Route element={<ProtectedRoute roles={["hod"]} />}>
         <Route path="/hod/dashboard" element={<HoDDashboard />} />
         <Route path="/hod/lecturers/:lecturerId" element={<HoDLecturerDetail />} />
+        <Route path="/hod/profile" element={<ProfileSettings />} />
       </Route>
 
       <Route element={<ProtectedRoute roles={["dean"]} />}>
         <Route path="/dean/dashboard" element={<DeanDashboard />} />
         <Route path="/dean/departments/:departmentId" element={<DeanDepartmentDetail />} />
         <Route path="/dean/lecturers/:lecturerId" element={<HoDLecturerDetail />} />
+        <Route path="/dean/profile" element={<ProfileSettings />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

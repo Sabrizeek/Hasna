@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import { query } from "../config/db.js";
 import { supervisionReportsUploadDir } from "../utils/uploadDirectories.js";
+import { notifyAdmins } from "../utils/notificationService.js";
 
 const parsePositiveInt = (value) => {
   const parsed = Number(value);
@@ -212,6 +213,14 @@ export const uploadSupervisionReport = async (req, res) => {
        VALUES (?, ?, ?, ?, ?, ?, 'submitted')`,
       [req.user.id, title, req.file.originalname, relativePath, req.file.mimetype, req.file.size]
     );
+
+    await notifyAdmins({
+      title: "New Supervision Report",
+      message: `A new supervision report has been submitted by ${req.user.full_name || "a lecturer"}.`,
+      type: "info",
+      relatedEntityType: "supervision_report",
+      relatedEntityId: result.insertId,
+    });
 
     res.status(201).json({
       message: "Supervision report uploaded successfully.",

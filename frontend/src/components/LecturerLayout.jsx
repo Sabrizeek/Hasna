@@ -1,24 +1,28 @@
-import { NavLink, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
-
-const initialsFromName = (name = "") => {
-  return name
-    .split(" ")
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join("") || "LE";
-};
+import NotificationBell from "./NotificationBell.jsx";
+import ProfileAvatarButton from "./ProfileAvatarButton.jsx";
 
 const navItems = [
-  { label: "Dashboard", to: "/lecturer/dashboard" },
-  { label: "My Evaluations", to: "/lecturer/dashboard" },
-  { label: "Supervision Reports", to: "/lecturer/supervision-reports" },
+  { key: "dashboard", label: "Dashboard", to: "/lecturer/dashboard" },
+  { key: "evaluations", label: "My Evaluations", to: "/lecturer/dashboard#evaluations" },
+  { key: "reports", label: "Supervision Reports", to: "/lecturer/supervision-reports" },
 ];
 
 const LecturerLayout = ({ children }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const isActiveItem = (item) => {
+    if (item.key === "dashboard") {
+      return location.pathname === "/lecturer/dashboard" && location.hash !== "#evaluations";
+    }
+    if (item.key === "evaluations") {
+      return location.pathname === "/lecturer/dashboard" && location.hash === "#evaluations";
+    }
+    return location.pathname === item.to;
+  };
 
   const handleLogout = () => {
     logout();
@@ -26,21 +30,20 @@ const LecturerLayout = ({ children }) => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="border-b border-sky-100 bg-white/95 shadow-sm backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
-          <div>
+    <div className="min-h-screen overflow-x-hidden bg-slate-50">
+      <header className="fixed inset-x-0 top-0 z-50 border-b border-sky-100 bg-white/95 shadow-sm backdrop-blur">
+        <div className="flex w-full flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6 lg:px-10">
+          <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-[0.28em] text-sky-700">Lecturer Dashboard</p>
-            <h1 className="text-lg font-bold text-slate-950">Lecturer Evaluation System</h1>
+            <h1 className="break-words text-lg font-bold text-slate-950">Lecturer Evaluation System</h1>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <NotificationBell accent="text-sky-700" />
             <div className="hidden text-right sm:block">
               <p className="text-sm font-semibold text-slate-950">{user?.full_name}</p>
               <p className="text-xs text-sky-700">Lecturer</p>
             </div>
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-sky-700 text-sm font-bold text-white">
-              {initialsFromName(user?.full_name)}
-            </div>
+            <ProfileAvatarButton user={user} to="/lecturer/profile" fallback="LE" className="bg-sky-700" />
             <button
               type="button"
               onClick={handleLogout}
@@ -52,25 +55,31 @@ const LecturerLayout = ({ children }) => {
         </div>
       </header>
 
-      <div className="mx-auto grid max-w-7xl gap-6 px-4 py-8 sm:px-6 lg:grid-cols-[240px_1fr] lg:px-8">
-        <aside className="h-fit rounded-3xl border border-slate-200 bg-white p-3 shadow-sm">
+      <div className="w-full min-w-0 px-4 pb-8 pt-28 sm:px-6 lg:px-10 lg:pl-[350px]">
+        <aside className="mb-6 h-fit rounded-3xl border border-sky-100 bg-white p-4 shadow-sm lg:fixed lg:left-8 lg:top-28 lg:z-20 lg:mb-0 lg:w-[290px]">
+          <div className="mb-4 rounded-2xl bg-sky-700 p-4 text-white">
+            <p className="text-xs font-bold uppercase tracking-[0.25em] text-sky-100">Lecturer</p>
+            <p className="mt-2 text-sm font-semibold">{user?.full_name}</p>
+            <p className="mt-1 text-xs text-sky-100">{user?.department_name || "Faculty of Science"}</p>
+          </div>
           <nav className="flex gap-2 overflow-x-auto lg:flex-col lg:overflow-visible">
-            {navItems.map((item) => (
-              <NavLink
-                key={`${item.label}-${item.to}`}
+            {navItems.map((item) => {
+              const isActive = isActiveItem(item);
+              return (
+              <Link
+                key={item.key}
                 to={item.to}
-                className={({ isActive }) =>
-                  `whitespace-nowrap rounded-2xl px-4 py-3 text-sm font-semibold transition ${
-                    isActive ? "bg-sky-700 text-white" : "text-slate-600 hover:bg-sky-50 hover:text-sky-800"
-                  }`
-                }
+                className={`whitespace-nowrap rounded-2xl px-4 py-3 text-sm font-semibold transition ${
+                  isActive ? "bg-sky-700 text-white shadow-sm" : "text-slate-600 hover:bg-sky-50 hover:text-sky-800"
+                }`}
               >
                 {item.label}
-              </NavLink>
-            ))}
+              </Link>
+              );
+            })}
           </nav>
         </aside>
-        <main>{children}</main>
+        <main className="min-w-0">{children}</main>
       </div>
     </div>
   );

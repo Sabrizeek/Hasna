@@ -7,7 +7,7 @@ const linkClass = ({ isActive }) =>
 
 const Sidebar = () => {
   return (
-    <aside className="flex min-h-screen w-full flex-col bg-brandBlue text-white lg:w-72">
+    <aside className="flex min-h-screen w-full flex-col bg-brandBlue text-white lg:fixed lg:inset-y-0 lg:left-0 lg:w-72 lg:overflow-y-auto">
       <div className="border-b border-white/10 px-6 py-6">
         <div className="text-xs uppercase tracking-[0.3em] text-brandGold">Faculty of Science</div>
         <h1 className="mt-2 text-2xl font-bold leading-tight">Admin Panel</h1>
@@ -15,13 +15,13 @@ const Sidebar = () => {
 
       <nav className="flex-1 space-y-2 px-4 py-6">
         <NavLink to="/admin/dashboard" className={linkClass}>Dashboard</NavLink>
-        <NavLink to="/admin/pending-users" className={linkClass}>Pending Accounts</NavLink>
         <NavLink to="/admin/users" className={linkClass}>User Management</NavLink>
         <NavLink to="/admin/departments" className={linkClass}>Departments</NavLink>
         <NavLink to="/admin/courses" className={linkClass}>Courses</NavLink>
         <NavLink to="/admin/module-assignments" className={linkClass}>Module Assignments</NavLink>
+        <NavLink to="/admin/award-scores" className={linkClass}>Awards & Scores</NavLink>
         <NavLink to="/admin/semesters" className={linkClass}>Semesters</NavLink>
-        <NavLink to="/admin/evaluation-windows" className={linkClass}>Windows & Tokens</NavLink>
+        <NavLink to="/admin/evaluation-windows" className={linkClass}>Evaluation Windows</NavLink>
         <NavLink to="/admin/announcements" className={linkClass}>Announcements</NavLink>
         <NavLink to="/admin/reports-audit" className={linkClass}>Reports & Audit</NavLink>
       </nav>

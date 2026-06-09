@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import path from "path";
 
 import authRoutes from "./routes/authRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
@@ -13,6 +14,8 @@ import questionRoutes from "./routes/questionRoutes.js";
 import lecturerRoutes from "./routes/lecturerRoutes.js";
 import hodRoutes from "./routes/hodRoutes.js";
 import deanRoutes from "./routes/deanRoutes.js";
+import userRoutes from "./routes/userRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
 import { downloadSupervisionTemplate } from "./controllers/lecturerController.js";
 import { query } from "./config/db.js";
 import { initializeDatabase } from "./config/initDatabase.js";
@@ -30,6 +33,7 @@ app.use(
   })
 );
 app.use(express.json());
+app.use("/uploads", express.static(path.resolve(process.cwd(), "uploads")));
 
 app.get("/", (req, res) => {
   res.json({ message: "Lecturer Evaluation System API is running." });
@@ -46,6 +50,8 @@ app.use("/api/questions", questionRoutes);
 app.use("/api/lecturer", lecturerRoutes);
 app.use("/api/hod", hodRoutes);
 app.use("/api/dean", deanRoutes);
+app.use("/api/users", userRoutes);
+app.use("/api/notifications", notificationRoutes);
 app.get("/api/supervision-template", downloadSupervisionTemplate);
 
 app.use((req, res) => {

@@ -10,6 +10,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Bar } from "react-chartjs-2";
 import { Link } from "react-router-dom";
 import api from "../api/axios.js";
+import DashboardAnnouncements from "../components/DashboardAnnouncements.jsx";
 import HoDLayout from "../components/HoDLayout.jsx";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
@@ -233,6 +234,9 @@ const HoDDashboard = () => {
           </div>
         </div>
       </section>
+      <div className="mt-6">
+        <DashboardAnnouncements accent="amber" />
+      </div>
     </HoDLayout>
   );
 };

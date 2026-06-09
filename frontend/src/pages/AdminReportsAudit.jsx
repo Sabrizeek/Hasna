@@ -5,32 +5,109 @@ import AdminLayout from "../components/AdminLayout.jsx";
 const AdminReportsAudit = () => {
   const [departments, setDepartments] = useState([]);
   const [semesters, setSemesters] = useState([]);
+  const [courses, setCourses] = useState([]);
+  const [lecturers, setLecturers] = useState([]);
   const [reports, setReports] = useState([]);
   const [logs, setLogs] = useState([]);
   const [filters, setFilters] = useState({ departmentId: "", semesterId: "", academicYear: "", role: "", from: "", to: "" });
+  const [evaluationFilters, setEvaluationFilters] = useState({
+    departmentId: "",
+    courseId: "",
+    lecturerId: "",
+    semesterId: "",
+    academicYear: "",
+    type: "",
+    dateFrom: "",
+    dateTo: "",
+    search: "",
+  });
+  const [evaluations, setEvaluations] = useState([]);
+  const [selectedEvaluation, setSelectedEvaluation] = useState(null);
+  const [evaluationError, setEvaluationError] = useState("");
   const [auditFilters, setAuditFilters] = useState({ search: "", from: "", to: "" });
 
+  const formatAuditAction = (action) =>
+    String(action || "")
+      .split("_")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
+
+  const formatAuditDetails = (details) => {
+    if (!details) return "";
+    let parsed = details;
+    if (typeof details === "string") {
+      try {
+        parsed = JSON.parse(details);
+      } catch {
+        return details;
+      }
+    }
+    if (parsed && typeof parsed === "object") {
+      return Object.entries(parsed)
+        .filter(([, value]) => value !== null && value !== undefined && value !== "")
+        .map(([key, value]) => {
+          const label = key
+            .replace(/([A-Z])/g, " $1")
+            .replace(/^./, (char) => char.toUpperCase());
+          return `${label}: ${value}`;
+        })
+        .join(" | ");
+    }
+    try {
+      return JSON.stringify(parsed);
+    } catch {
+      return "Details unavailable";
+    }
+  };
+
   const loadData = async () => {
-    const [departmentsRes, semestersRes, reportsRes] = await Promise.all([
-      api.get("/departments"),
-      api.get("/semesters"),
-      api.get("/admin/supervision-reports"),
-    ]);
-    setDepartments(departmentsRes.data.departments || []);
-    setSemesters(semestersRes.data.semesters || []);
-    setReports(reportsRes.data.reports || []);
+    try {
+      const [departmentsRes, semestersRes, reportsRes, coursesRes, usersRes] = await Promise.all([
+        api.get("/departments"),
+        api.get("/semesters"),
+        api.get("/admin/supervision-reports"),
+        api.get("/courses"),
+        api.get("/admin/users"),
+      ]);
+      setDepartments(departmentsRes.data.departments || []);
+      setSemesters(semestersRes.data.semesters || []);
+      setReports(reportsRes.data.reports || []);
+      setCourses(coursesRes.data.courses || []);
+      setLecturers((usersRes.data.users || []).filter((user) => user.role === "lecturer"));
+    } catch {
+      setReports([]);
+    }
+  };
+
+  const loadEvaluations = async () => {
+    try {
+      setEvaluationError("");
+      const response = await api.get("/admin/evaluations", { params: evaluationFilters });
+      setEvaluations(response.data.evaluations || []);
+    } catch (error) {
+      setEvaluationError(error.response?.data?.message || "Failed to fetch evaluation records.");
+    }
   };
 
   const loadLogs = async () => {
-    const response = await api.get("/admin/audit-logs", { params: { ...auditFilters, page: 1, limit: 50 } });
-    setLogs(response.data.logs || []);
+    try {
+      const response = await api.get("/admin/audit-logs", { params: { ...auditFilters, page: 1, limit: 50 } });
+      setLogs(response.data.logs || []);
+    } catch {
+      setLogs([]);
+    }
   };
 
-  useEffect(() => { loadData(); loadLogs(); }, []);
+  useEffect(() => { loadData(); loadLogs(); loadEvaluations(); }, []);
 
   const handleSemester = (value) => {
     const semester = semesters.find((item) => String(item.id) === value);
     setFilters((current) => ({ ...current, semesterId: value, academicYear: semester?.academic_year || "" }));
+  };
+
+  const handleEvaluationSemester = (value) => {
+    const semester = semesters.find((item) => String(item.id) === value);
+    setEvaluationFilters((current) => ({ ...current, semesterId: value, academicYear: semester?.academic_year || "" }));
   };
 
   const exportCsv = async () => {
@@ -55,6 +132,28 @@ const AdminReportsAudit = () => {
     URL.revokeObjectURL(url);
   };
 
+  const exportEvaluationRecordsCsv = async () => {
+    const response = await api.get("/admin/export/evaluations", {
+      params: { ...evaluationFilters, format: "csv" },
+      responseType: "blob",
+    });
+    const url = URL.createObjectURL(response.data);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "admin-evaluation-records.csv";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    loadLogs();
+  };
+
+  const openEvaluationDetail = async (evaluation) => {
+    const response = await api.get(`/admin/evaluations/${evaluation.submissionId}`);
+    setSelectedEvaluation(response.data.evaluation);
+    loadLogs();
+  };
+
   const downloadReport = async (report) => {
     const response = await api.get(`/admin/supervision-reports/${report.id}/download`, { responseType: "blob" });
     const url = URL.createObjectURL(response.data);
@@ -73,6 +172,13 @@ const AdminReportsAudit = () => {
     loadLogs();
   };
 
+  const deleteAuditLog = async (log) => {
+    const confirmed = window.confirm(`Delete audit log "${formatAuditAction(log.action)}"?`);
+    if (!confirmed) return;
+    await api.delete(`/admin/audit-logs/${log.id}`);
+    loadLogs();
+  };
+
   return (
     <AdminLayout title="Reports & Audit">
       <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -84,6 +190,59 @@ const AdminReportsAudit = () => {
           <input type="date" value={filters.from} onChange={(e) => setFilters((c) => ({ ...c, from: e.target.value }))} className="rounded-2xl border border-slate-300 px-4 py-3" />
           <input type="date" value={filters.to} onChange={(e) => setFilters((c) => ({ ...c, to: e.target.value }))} className="rounded-2xl border border-slate-300 px-4 py-3" />
           <button onClick={exportCsv} className="rounded-2xl bg-brandBlue px-5 py-3 font-semibold text-white">Export CSV</button>
+        </div>
+      </div>
+
+      <div className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+          <div>
+            <h3 className="text-xl font-bold text-brandBlue">Evaluation Records</h3>
+            <p className="mt-1 text-sm text-slate-500">Admin-only tracking view with student identity for audit and duplicate investigation.</p>
+          </div>
+          <button onClick={exportEvaluationRecordsCsv} className="rounded-2xl bg-brandBlue px-5 py-3 font-semibold text-white">Export Records CSV</button>
+        </div>
+
+        <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <input placeholder="Search student, lecturer, course" value={evaluationFilters.search} onChange={(e) => setEvaluationFilters((c) => ({ ...c, search: e.target.value }))} className="rounded-2xl border border-slate-300 px-4 py-3" />
+          <select value={evaluationFilters.departmentId} onChange={(e) => setEvaluationFilters((c) => ({ ...c, departmentId: e.target.value, courseId: "" }))} className="rounded-2xl border border-slate-300 px-4 py-3"><option value="">All departments</option>{departments.map((d) => <option key={d.id} value={d.id}>{d.department_name}</option>)}</select>
+          <select value={evaluationFilters.courseId} onChange={(e) => setEvaluationFilters((c) => ({ ...c, courseId: e.target.value }))} className="rounded-2xl border border-slate-300 px-4 py-3"><option value="">All courses</option>{courses.filter((course) => !evaluationFilters.departmentId || String(course.department_id) === evaluationFilters.departmentId).map((course) => <option key={course.id} value={course.id}>{course.course_code} - {course.course_name}</option>)}</select>
+          <select value={evaluationFilters.lecturerId} onChange={(e) => setEvaluationFilters((c) => ({ ...c, lecturerId: e.target.value }))} className="rounded-2xl border border-slate-300 px-4 py-3"><option value="">All lecturers</option>{lecturers.filter((lecturer) => !evaluationFilters.departmentId || String(lecturer.department_id) === evaluationFilters.departmentId).map((lecturer) => <option key={lecturer.id} value={lecturer.id}>{lecturer.full_name}</option>)}</select>
+          <select value={evaluationFilters.semesterId} onChange={(e) => handleEvaluationSemester(e.target.value)} className="rounded-2xl border border-slate-300 px-4 py-3"><option value="">All semesters</option>{semesters.map((s) => <option key={s.id} value={s.id}>{s.semester_name} - {s.academic_year}</option>)}</select>
+          <select value={evaluationFilters.type} onChange={(e) => setEvaluationFilters((c) => ({ ...c, type: e.target.value }))} className="rounded-2xl border border-slate-300 px-4 py-3"><option value="">All types</option><option value="theory">Theory</option><option value="practical">Practical</option></select>
+          <input type="date" value={evaluationFilters.dateFrom} onChange={(e) => setEvaluationFilters((c) => ({ ...c, dateFrom: e.target.value }))} className="rounded-2xl border border-slate-300 px-4 py-3" />
+          <input type="date" value={evaluationFilters.dateTo} onChange={(e) => setEvaluationFilters((c) => ({ ...c, dateTo: e.target.value }))} className="rounded-2xl border border-slate-300 px-4 py-3" />
+        </div>
+
+        <div className="mt-4 flex justify-end">
+          <button onClick={loadEvaluations} className="rounded-2xl bg-brandGold px-5 py-3 font-semibold text-white">Search Records</button>
+        </div>
+        {evaluationError && <p className="mt-3 text-sm font-semibold text-red-600">{evaluationError}</p>}
+
+        <div className="mt-5 overflow-x-auto">
+          <table className="min-w-full text-left text-sm">
+            <thead className="text-slate-500">
+              <tr><th className="py-3 pr-4">Submitted</th><th className="py-3 pr-4">University ID</th><th className="py-3 pr-4">Student</th><th className="py-3 pr-4">Student Email</th><th className="py-3 pr-4">Department</th><th className="py-3 pr-4">Course</th><th className="py-3 pr-4">Lecturer</th><th className="py-3 pr-4">Type</th><th className="py-3 pr-4">Grade</th><th className="py-3 pr-4">Action</th></tr>
+            </thead>
+            <tbody>
+              {evaluations.map((evaluation) => (
+                <tr key={evaluation.submissionId} className="border-t border-slate-100">
+                  <td className="py-4 pr-4">{new Date(evaluation.submittedAt).toLocaleString()}</td>
+                  <td className="py-4 pr-4 font-semibold">{evaluation.studentRegistrationNumber || "Not recorded"}</td>
+                  <td className="py-4 pr-4 font-semibold">{evaluation.studentName}</td>
+                  <td className="py-4 pr-4">{evaluation.studentEmail}</td>
+                  <td className="py-4 pr-4">{evaluation.departmentName}</td>
+                  <td className="py-4 pr-4">{evaluation.courseCode}</td>
+                  <td className="py-4 pr-4">{evaluation.lecturerName}</td>
+                  <td className="py-4 pr-4 capitalize">{evaluation.type}</td>
+                  <td className="py-4 pr-4 font-semibold">{Number(evaluation.overallGrade || 0).toFixed(1)}</td>
+                  <td className="py-4 pr-4"><button onClick={() => openEvaluationDetail(evaluation)} className="rounded-full border border-brandBlue px-4 py-2 text-xs font-semibold text-brandBlue">View Detail</button></td>
+                </tr>
+              ))}
+              {evaluations.length === 0 && (
+                <tr><td colSpan="10" className="py-6 text-center text-slate-500">No evaluation records match the current filters.</td></tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 
@@ -115,10 +274,79 @@ const AdminReportsAudit = () => {
             <button onClick={loadLogs} className="rounded-2xl bg-brandGold px-5 py-3 font-semibold text-white">Search</button>
           </div>
         </div>
-        <div className="mt-5 overflow-x-auto"><table className="min-w-full text-left text-sm"><tbody>
-          {logs.map((log) => <tr key={log.id} className="border-t border-slate-100"><td className="py-4 pr-4">{new Date(log.created_at).toLocaleString()}</td><td className="py-4 pr-4">{log.user_name || "System"}</td><td className="py-4 pr-4 font-semibold">{log.action}</td><td className="py-4 pr-4 text-slate-600">{log.details || ""}</td></tr>)}
-        </tbody></table></div>
+        <div className="mt-5 overflow-x-auto">
+          <table className="min-w-full text-left text-sm">
+            <thead className="text-slate-500">
+              <tr><th className="py-3 pr-4">Time</th><th className="py-3 pr-4">User</th><th className="py-3 pr-4">Action</th><th className="py-3 pr-4">Entity</th><th className="py-3 pr-4">Details</th><th className="py-3 pr-4">Action</th></tr>
+            </thead>
+            <tbody>
+              {logs.map((log) => (
+                <tr key={log.id} className="border-t border-slate-100">
+                  <td className="py-4 pr-4">{new Date(log.created_at).toLocaleString()}</td>
+                  <td className="py-4 pr-4">{log.user_name || "System"}</td>
+                  <td className="py-4 pr-4 font-semibold">{formatAuditAction(log.action)}</td>
+                  <td className="py-4 pr-4 text-slate-600">{log.entity_type}{log.entity_id ? ` #${log.entity_id}` : ""}</td>
+                  <td className="py-4 pr-4 text-slate-600">{formatAuditDetails(log.details) || "-"}</td>
+                  <td className="py-4 pr-4">
+                    <button onClick={() => deleteAuditLog(log)} className="rounded-full border border-red-200 px-4 py-2 text-xs font-semibold text-red-700">Delete</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
+
+      {selectedEvaluation && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4">
+          <div className="max-h-[90vh] w-full max-w-4xl overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-[0.25em] text-brandGold">Evaluation Detail</p>
+                <h3 className="mt-2 text-2xl font-bold text-brandBlue">{selectedEvaluation.courseCode} - {selectedEvaluation.courseName}</h3>
+                <p className="mt-1 text-sm text-slate-500">{selectedEvaluation.semesterName} - {selectedEvaluation.academicYear} | {selectedEvaluation.type}</p>
+              </div>
+              <button onClick={() => setSelectedEvaluation(null)} className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600">Close</button>
+            </div>
+
+            <div className="mt-6 grid gap-4 md:grid-cols-2">
+              <div className="rounded-2xl bg-slate-50 p-4">
+                <h4 className="font-bold text-brandBlue">Student Identity</h4>
+                <p className="mt-2 text-sm"><span className="font-semibold">ID:</span> {selectedEvaluation.studentId}</p>
+                <p className="mt-1 text-sm"><span className="font-semibold">Name:</span> {selectedEvaluation.studentName}</p>
+                <p className="mt-1 text-sm"><span className="font-semibold">Email:</span> {selectedEvaluation.studentEmail}</p>
+                <p className="mt-1 text-sm"><span className="font-semibold">Registration:</span> {selectedEvaluation.studentRegistrationNumber || "Not recorded"}</p>
+              </div>
+              <div className="rounded-2xl bg-slate-50 p-4">
+                <h4 className="font-bold text-brandBlue">Evaluation Context</h4>
+                <p className="mt-2 text-sm"><span className="font-semibold">Department:</span> {selectedEvaluation.departmentName}</p>
+                <p className="mt-1 text-sm"><span className="font-semibold">Lecturer:</span> {selectedEvaluation.lecturerName}</p>
+                <p className="mt-1 text-sm"><span className="font-semibold">Overall Grade:</span> {Number(selectedEvaluation.overallGrade || 0).toFixed(1)}</p>
+                <p className="mt-1 text-sm"><span className="font-semibold">Submitted:</span> {new Date(selectedEvaluation.submittedAt).toLocaleString()}</p>
+              </div>
+            </div>
+
+            <div className="mt-5 rounded-2xl border border-slate-200 p-4">
+              <h4 className="font-bold text-brandBlue">Comment</h4>
+              <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700">{selectedEvaluation.commentText || "No comment recorded."}</p>
+            </div>
+
+            <div className="mt-5 overflow-x-auto">
+              <table className="min-w-full text-left text-sm">
+                <thead className="text-slate-500"><tr><th className="py-3 pr-4">Question</th><th className="py-3 pr-4">Score</th></tr></thead>
+                <tbody>
+                  {(selectedEvaluation.responses || []).map((response) => (
+                    <tr key={response.questionId} className="border-t border-slate-100">
+                      <td className="py-4 pr-4"><span className="font-semibold">{response.label}</span> {response.questionText}</td>
+                      <td className="py-4 pr-4 font-bold text-brandBlue">{response.score}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
     </AdminLayout>
   );
 };

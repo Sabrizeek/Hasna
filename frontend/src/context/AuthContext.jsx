@@ -23,10 +23,7 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     const initializeAuth = async () => {
-      const existingLocalToken = localStorage.getItem(TOKEN_KEY);
-      if (existingLocalToken && !sessionStorage.getItem(TOKEN_KEY)) {
-        sessionStorage.setItem(TOKEN_KEY, existingLocalToken);
-      }
+      localStorage.removeItem(TOKEN_KEY);
 
       const token = getToken();
       if (!token) {
@@ -47,15 +44,18 @@ export const AuthProvider = ({ children }) => {
     initializeAuth();
   }, []);
 
-  const login = async (email, password) => {
-    const response = await api.post("/auth/login", { email, password });
+  const login = async (identifier, password, mode = "staff") => {
+    const endpoint = mode === "student" ? "/auth/student-login" : "/auth/staff-login";
+    const payload = mode === "student" ? { universityId: identifier, password } : { identifier, password };
+    const response = await api.post(endpoint, payload);
     setToken(response.data.token);
     setUser(response.data.user);
     return response.data.user;
   };
 
-  const register = async (payload) => {
-    const response = await api.post("/auth/register", payload);
+  const changePassword = async (payload) => {
+    const response = await api.patch("/users/me/password", payload);
+    setUser(response.data.user);
     return response.data;
   };
 
@@ -65,7 +65,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, setUser }}>
+    <AuthContext.Provider value={{ user, loading, login, changePassword, logout, setUser }}>
       {children}
     </AuthContext.Provider>
   );

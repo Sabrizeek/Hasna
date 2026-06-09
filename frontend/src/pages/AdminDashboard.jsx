@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import AdminLayout from "../components/AdminLayout.jsx";
+import DashboardAnnouncements from "../components/DashboardAnnouncements.jsx";
 import api from "../api/axios.js";
 
 const AdminDashboard = () => {
@@ -40,6 +41,10 @@ const AdminDashboard = () => {
             <h3 className="mt-4 text-3xl font-bold text-brandBlue">{card.value}</h3>
           </div>
         ))}
+      </div>
+
+      <div className="mt-8">
+        <DashboardAnnouncements accent="blue" />
       </div>
 
       <div className="mt-8 grid gap-6 xl:grid-cols-2">

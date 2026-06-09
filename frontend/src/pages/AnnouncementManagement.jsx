@@ -13,6 +13,8 @@ const AnnouncementManagement = () => {
   const [announcements, setAnnouncements] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [formData, setFormData] = useState(emptyForm);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
 
   const loadData = async () => {
     const [announcementsRes, departmentsRes] = await Promise.all([
@@ -33,22 +35,33 @@ const AnnouncementManagement = () => {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    setMessage("");
+    setError("");
     const payload = {
       ...formData,
       department_id: formData.department_id ? Number(formData.department_id) : null,
     };
-    await api.post("/announcements", payload);
-    setFormData(emptyForm);
-    loadData();
+    try {
+      const response = await api.post("/announcements", payload);
+      setMessage(`${response.data.message} Notified ${response.data.notificationCount || 0} user(s).`);
+      setFormData(emptyForm);
+      loadData();
+    } catch (announcementError) {
+      setError(announcementError.response?.data?.message || "Unable to create announcement.");
+    }
   };
 
   const handleDelete = async (id) => {
+    const confirmed = window.confirm("Delete this announcement?");
+    if (!confirmed) return;
     await api.delete(`/announcements/${id}`);
     loadData();
   };
 
   return (
     <AdminLayout title="Announcements">
+      {message && <p className="mb-4 rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">{message}</p>}
+      {error && <p className="mb-4 rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</p>}
       <div className="grid gap-6 xl:grid-cols-[380px_1fr]">
         <form onSubmit={handleSubmit} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
           <h3 className="text-xl font-bold text-brandBlue">Create Announcement</h3>

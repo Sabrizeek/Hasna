@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../api/axios.js";
+import DashboardAnnouncements from "../components/DashboardAnnouncements.jsx";
 import LecturerLayout from "../components/LecturerLayout.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 
@@ -51,7 +52,11 @@ const LecturerDashboard = () => {
         </div>
       </section>
 
-      <section className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+      <div className="mt-6">
+        <DashboardAnnouncements accent="sky" />
+      </div>
+
+      <section id="evaluations" className="mt-6 scroll-mt-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.24em] text-sky-700">My Evaluations</p>

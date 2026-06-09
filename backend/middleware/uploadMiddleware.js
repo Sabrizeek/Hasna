@@ -1,6 +1,6 @@
 import multer from "multer";
 import path from "path";
-import { supervisionReportsUploadDir } from "../utils/uploadDirectories.js";
+import { profilePhotosUploadDir, supervisionReportsUploadDir } from "../utils/uploadDirectories.js";
 
 const allowedMimeTypes = new Set([
   "application/pdf",
@@ -36,6 +36,33 @@ export const supervisionReportUpload = multer({
       return;
     }
 
+    callback(null, true);
+  },
+});
+
+const imageMimeTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+const imageExtensionByMimeType = {
+  "image/jpeg": ".jpg",
+  "image/png": ".png",
+  "image/webp": ".webp",
+};
+
+const profilePhotoStorage = multer.diskStorage({
+  destination: (req, file, callback) => callback(null, profilePhotosUploadDir),
+  filename: (req, file, callback) => {
+    const extension = imageExtensionByMimeType[file.mimetype] || path.extname(file.originalname).toLowerCase();
+    callback(null, `profile-${req.user.id}-${Date.now()}-${Math.round(Math.random() * 1e9)}${extension}`);
+  },
+});
+
+export const profilePhotoUpload = multer({
+  storage: profilePhotoStorage,
+  limits: { fileSize: 2 * 1024 * 1024 },
+  fileFilter: (req, file, callback) => {
+    if (!imageMimeTypes.has(file.mimetype)) {
+      callback(Object.assign(new Error("Only JPG, PNG, and WEBP images are allowed."), { status: 400 }));
+      return;
+    }
     callback(null, true);
   },
 });

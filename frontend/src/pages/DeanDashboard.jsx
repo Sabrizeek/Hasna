@@ -10,6 +10,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Bar } from "react-chartjs-2";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../api/axios.js";
+import DashboardAnnouncements from "../components/DashboardAnnouncements.jsx";
 import DeanLayout from "../components/DeanLayout.jsx";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
@@ -190,6 +191,10 @@ const DeanDashboard = () => {
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <PerformerCards title="Top Performers" items={overview?.topPerformers || []} />
         <PerformerCards title="Needs Attention" items={overview?.needsAttention || []} />
+      </div>
+
+      <div className="mt-6">
+        <DashboardAnnouncements accent="orange" />
       </div>
     </DeanLayout>
   );

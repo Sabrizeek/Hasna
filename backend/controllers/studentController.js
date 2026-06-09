@@ -1,4 +1,5 @@
 import { getPool, query } from "../config/db.js";
+import { notifyUser, notifyUsers } from "../utils/notificationService.js";
 
 const parsePositiveInt = (value) => {
   const parsed = Number(value);
@@ -387,6 +388,59 @@ export const createStudentSubmission = async (req, res) => {
     );
 
     await connection.commit();
+
+    try {
+      const [notificationRows] = await query(
+        `SELECT c.course_code, c.course_name, d.department_name, l.full_name AS lecturer_name,
+                l.department_id AS lecturer_department_id, s.semester_name
+         FROM courses c
+         INNER JOIN users l ON l.id = ?
+         INNER JOIN departments d ON l.department_id = d.id
+         INNER JOIN semesters s ON s.id = ?
+         WHERE c.id = ?
+         LIMIT 1`,
+        [lecturerId, semesterId, courseId]
+      );
+      const notificationInfo = notificationRows[0] || {};
+
+      await notifyUser({
+        userId: lecturerId,
+        title: "New Evaluation Submitted",
+        message: `A ${type} evaluation was submitted for ${notificationInfo.course_code || "your module"} - ${notificationInfo.course_name || "course"}.`,
+        type: "info",
+        relatedEntityType: "evaluation_submission",
+        relatedEntityId: submissionResult.insertId,
+      });
+
+      await notifyUser({
+        userId: req.user.id,
+        title: "Evaluation Submitted",
+        message: `Your ${type} evaluation for ${notificationInfo.lecturer_name || "the selected lecturer"} was submitted successfully.`,
+        type: "success",
+        relatedEntityType: "evaluation_submission",
+        relatedEntityId: submissionResult.insertId,
+      });
+
+      if (notificationInfo.lecturer_department_id) {
+        const [hods] = await query(
+          `SELECT id FROM users
+           WHERE role = 'hod'
+             AND department_id = ?
+             AND status = 'approved'
+             AND deleted_at IS NULL`,
+          [notificationInfo.lecturer_department_id]
+        );
+        await notifyUsers(hods.map((hod) => hod.id), {
+          title: "Department Evaluation Submitted",
+          message: `A ${type} evaluation was submitted for ${notificationInfo.lecturer_name || "a lecturer"} in ${notificationInfo.department_name || "your department"}.`,
+          type: "info",
+          relatedEntityType: "evaluation_submission",
+          relatedEntityId: submissionResult.insertId,
+        });
+      }
+    } catch (notificationError) {
+      console.error("Evaluation notification failed:", notificationError.message);
+    }
 
     res.status(201).json({
       message: "Evaluation submitted successfully.",

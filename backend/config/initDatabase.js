@@ -15,15 +15,25 @@ const createTables = [
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
   `CREATE TABLE IF NOT EXISTS users (
     id INT AUTO_INCREMENT PRIMARY KEY,
+    university_id VARCHAR(50) NULL UNIQUE,
     full_name VARCHAR(150) NOT NULL,
     email VARCHAR(150) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
     role ENUM('student', 'lecturer', 'admin', 'hod', 'dean') NOT NULL,
     status ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending',
     department_id INT NULL,
+    profile_photo VARCHAR(500) NULL,
+    phone VARCHAR(30) NULL,
+    first_login TINYINT(1) NOT NULL DEFAULT 1,
+    must_change_password TINYINT(1) NOT NULL DEFAULT 1,
+    created_by INT NULL,
+    last_login DATETIME NULL,
+    deleted_at DATETIME NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_users_department FOREIGN KEY (department_id) REFERENCES departments(id)
+      ON UPDATE CASCADE ON DELETE SET NULL,
+    CONSTRAINT fk_users_created_by FOREIGN KEY (created_by) REFERENCES users(id)
       ON UPDATE CASCADE ON DELETE SET NULL
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
   `CREATE TABLE IF NOT EXISTS semesters (
@@ -133,7 +143,8 @@ const createTables = [
       ON UPDATE CASCADE ON DELETE CASCADE,
     CONSTRAINT fk_evaluation_submissions_semester FOREIGN KEY (semester_id) REFERENCES semesters(id)
       ON UPDATE CASCADE ON DELETE CASCADE,
-    UNIQUE KEY uq_evaluation_submissions_once (student_id, lecturer_id, course_id, semester_id, type)
+    UNIQUE KEY uq_evaluation_submissions_once (student_id, lecturer_id, course_id, semester_id, type),
+    UNIQUE KEY uq_evaluation_submissions_once_year (student_id, lecturer_id, course_id, semester_id, academic_year, type)
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
   `CREATE TABLE IF NOT EXISTS evaluation_responses (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -206,6 +217,53 @@ const createTables = [
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_audit_logs_user FOREIGN KEY (user_id) REFERENCES users(id)
       ON UPDATE CASCADE ON DELETE SET NULL
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+  `CREATE TABLE IF NOT EXISTS lecturer_award_scores (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    lecturer_id INT NOT NULL,
+    semester_id INT NOT NULL,
+    academic_year VARCHAR(20) NOT NULL,
+    supervision_score DECIMAL(6,2) NOT NULL DEFAULT 0,
+    admin_comment TEXT NULL,
+    updated_by INT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_lecturer_award_scores_lecturer FOREIGN KEY (lecturer_id) REFERENCES users(id)
+      ON UPDATE CASCADE ON DELETE CASCADE,
+    CONSTRAINT fk_lecturer_award_scores_semester FOREIGN KEY (semester_id) REFERENCES semesters(id)
+      ON UPDATE CASCADE ON DELETE CASCADE,
+    CONSTRAINT fk_lecturer_award_scores_updated_by FOREIGN KEY (updated_by) REFERENCES users(id)
+      ON UPDATE CASCADE ON DELETE SET NULL,
+    UNIQUE KEY uq_lecturer_award_scores (lecturer_id, semester_id, academic_year)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+  `CREATE TABLE IF NOT EXISTS password_reset_requests (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    university_id VARCHAR(50) NOT NULL,
+    email VARCHAR(150) NOT NULL,
+    status ENUM('pending','approved','rejected') NOT NULL DEFAULT 'pending',
+    requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    reviewed_by INT NULL,
+    reviewed_at TIMESTAMP NULL DEFAULT NULL,
+    admin_note TEXT NULL,
+    CONSTRAINT fk_password_reset_requests_user FOREIGN KEY (user_id) REFERENCES users(id)
+      ON UPDATE CASCADE ON DELETE CASCADE,
+    CONSTRAINT fk_password_reset_requests_reviewed_by FOREIGN KEY (reviewed_by) REFERENCES users(id)
+      ON UPDATE CASCADE ON DELETE SET NULL
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+  `CREATE TABLE IF NOT EXISTS notifications (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NULL,
+    role ENUM('student','lecturer','admin','hod','dean') NULL,
+    title VARCHAR(200) NOT NULL,
+    message TEXT NOT NULL,
+    type ENUM('info','success','warning','error','system') NOT NULL DEFAULT 'info',
+    is_read TINYINT(1) NOT NULL DEFAULT 0,
+    related_entity_type VARCHAR(100) NULL,
+    related_entity_id INT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_notifications_user FOREIGN KEY (user_id) REFERENCES users(id)
+      ON UPDATE CASCADE ON DELETE CASCADE
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
   `CREATE TABLE IF NOT EXISTS comments (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -292,6 +350,15 @@ const addUniqueIndexIfMissing = async (tableName, indexName, columns) => {
 };
 
 const migrateExistingTables = async () => {
+  await addColumnIfMissing("users", "university_id", "VARCHAR(50) NULL UNIQUE AFTER id");
+  await addColumnIfMissing("users", "profile_photo", "VARCHAR(500) NULL AFTER department_id");
+  await addColumnIfMissing("users", "phone", "VARCHAR(30) NULL AFTER profile_photo");
+  await addColumnIfMissing("users", "first_login", "TINYINT(1) NOT NULL DEFAULT 1 AFTER phone");
+  await addColumnIfMissing("users", "must_change_password", "TINYINT(1) NOT NULL DEFAULT 1 AFTER first_login");
+  await addColumnIfMissing("users", "created_by", "INT NULL AFTER must_change_password");
+  await addColumnIfMissing("users", "last_login", "DATETIME NULL AFTER created_by");
+  await addColumnIfMissing("users", "deleted_at", "DATETIME NULL AFTER last_login");
+
   await addColumnIfMissing("questions", "type", "ENUM('theory','practical') NOT NULL DEFAULT 'theory' AFTER id");
   await addColumnIfMissing("questions", "label", "VARCHAR(100) NULL AFTER type");
   await addColumnIfMissing("questions", "display_order", "INT NOT NULL DEFAULT 0 AFTER question_text");
@@ -301,6 +368,7 @@ const migrateExistingTables = async () => {
 };
 
 const createIndexes = async () => {
+  await addUniqueIndexIfMissing("users", "uq_users_university_id", "university_id");
   await addIndexIfMissing("users", "idx_users_department_id", "department_id");
   await addIndexIfMissing("users", "idx_users_role_status", "role, status");
   await addIndexIfMissing("courses", "idx_courses_department_id", "department_id");
@@ -323,6 +391,7 @@ const createIndexes = async () => {
   await addIndexIfMissing("evaluation_submissions", "idx_eval_submissions_semester_id", "semester_id");
   await addIndexIfMissing("evaluation_submissions", "idx_eval_submissions_submitted_at", "submitted_at");
   await addIndexIfMissing("evaluation_submissions", "idx_eval_submissions_type", "type");
+  await addUniqueIndexIfMissing("evaluation_submissions", "uq_evaluation_submissions_once_year", "student_id, lecturer_id, course_id, semester_id, academic_year, type");
   await addIndexIfMissing("evaluation_responses", "idx_eval_responses_submission_id", "submission_id");
   await addIndexIfMissing("evaluation_responses", "idx_eval_responses_question_id", "question_id");
   await addIndexIfMissing("supervision_reports", "idx_supervision_reports_lecturer_id", "lecturer_id");
@@ -335,6 +404,14 @@ const createIndexes = async () => {
   await addIndexIfMissing("access_tokens", "idx_access_tokens_status", "status");
   await addIndexIfMissing("audit_logs", "idx_audit_logs_user_id", "user_id");
   await addIndexIfMissing("audit_logs", "idx_audit_logs_entity", "entity_type, entity_id");
+  await addIndexIfMissing("lecturer_award_scores", "idx_lecturer_award_scores_lecturer_id", "lecturer_id");
+  await addIndexIfMissing("lecturer_award_scores", "idx_lecturer_award_scores_semester_id", "semester_id");
+  await addIndexIfMissing("password_reset_requests", "idx_password_reset_requests_user_status", "user_id, status");
+  await addIndexIfMissing("password_reset_requests", "idx_password_reset_requests_status", "status");
+  await addIndexIfMissing("password_reset_requests", "idx_password_reset_requests_requested_at", "requested_at");
+  await addIndexIfMissing("notifications", "idx_notifications_user_read", "user_id, is_read");
+  await addIndexIfMissing("notifications", "idx_notifications_created_at", "created_at");
+  await addIndexIfMissing("notifications", "idx_notifications_related", "related_entity_type, related_entity_id");
 };
 
 const normalizeSemesters = async () => {
@@ -422,46 +499,53 @@ const seedSemesters = [
 ];
 
 const defaultAdmin = {
+  university_id: process.env.ADMIN_UNIVERSITY_ID || "ADM001",
   full_name: process.env.ADMIN_NAME || "Hasna Faizar",
   email: process.env.ADMIN_EMAIL || "admin@ruhuna.lk",
   password: process.env.ADMIN_PASSWORD || "Admin@123",
   department_id: Number(process.env.ADMIN_DEPARTMENT_ID || 1),
 };
 
-const demoPassword = process.env.DEMO_PASSWORD || "Demo@123";
+const demoPassword = process.env.DEFAULT_USER_PASSWORD || process.env.DEMO_PASSWORD || "UOR@12345";
 
-const seedUsers = [
+const baseSeedUsers = [
   {
+    university_id: "SCI2026001",
     full_name: "Ayesha Perera",
     email: "student@ruhuna.lk",
     role: "student",
     department_name: "Department of Computer Science",
   },
   {
+    university_id: "DEAN001",
     full_name: "Prof. Anoma Senanayake",
     email: "dean.science@ruhuna.lk",
     role: "dean",
     department_name: "Department of Computer Science",
   },
   {
+    university_id: "HOD005",
     full_name: "Dr. Chamari Gunawardena",
     email: "hod.botany@ruhuna.lk",
     role: "hod",
     department_name: "Department of Botany",
   },
   {
+    university_id: "HOD002",
     full_name: "Dr. Pradeep Wijesinghe",
     email: "hod.mathematics@ruhuna.lk",
     role: "hod",
     department_name: "Department of Mathematics",
   },
   {
+    university_id: "HOD001",
     full_name: "Dr. Shalini Rathnayake",
     email: "hod.cs@ruhuna.lk",
     role: "hod",
     department_name: "Department of Computer Science",
   },
   {
+    university_id: "LEC001",
     full_name: "Dr. Nimal Jayasinghe",
     email: "nimal.jayasinghe@ruhuna.lk",
     role: "lecturer",
@@ -470,6 +554,7 @@ const seedUsers = [
     qualifications: "PhD in Computer Science\nMSc in Software Engineering\nBSc Special in Computer Science",
   },
   {
+    university_id: "LEC002",
     full_name: "Dr. Tharushi Fernando",
     email: "tharushi.fernando@ruhuna.lk",
     role: "lecturer",
@@ -478,6 +563,7 @@ const seedUsers = [
     qualifications: "PhD in Applied Mathematics\nMPhil in Mathematical Modelling\nBSc Special in Mathematics",
   },
   {
+    university_id: "LEC003",
     full_name: "Dr. Kasun Silva",
     email: "kasun.silva@ruhuna.lk",
     role: "lecturer",
@@ -486,6 +572,7 @@ const seedUsers = [
     qualifications: "PhD in Analytical Chemistry\nBSc Special in Chemistry",
   },
   {
+    university_id: "LEC004",
     full_name: "Dr. Malsha Weerasinghe",
     email: "malsha.weerasinghe@ruhuna.lk",
     role: "lecturer",
@@ -494,6 +581,7 @@ const seedUsers = [
     qualifications: "PhD in Zoology\nMSc in Biodiversity Conservation\nBSc Special in Zoology",
   },
   {
+    university_id: "LEC005",
     full_name: "Dr. Sandeepani Dias",
     email: "sandeepani.dias@ruhuna.lk",
     role: "lecturer",
@@ -502,6 +590,7 @@ const seedUsers = [
     qualifications: "PhD in Plant Sciences\nBSc Special in Botany",
   },
   {
+    university_id: "LEC006",
     full_name: "Dr. Ruwan Bandara",
     email: "ruwan.bandara@ruhuna.lk",
     role: "lecturer",
@@ -510,6 +599,72 @@ const seedUsers = [
     qualifications: "PhD in Physics\nMSc in Materials Science\nBSc Special in Physics",
   },
 ];
+
+const generatedStudents = [
+  "Department of Computer Science",
+  "Department of Mathematics",
+  "Department of Chemistry",
+  "Department of Zoology",
+  "Department of Botany",
+  "Department of Physics",
+].flatMap((departmentName, departmentIndex) =>
+  Array.from({ length: 5 }, (_, index) => {
+    const number = departmentIndex * 5 + index + 2;
+    const padded = String(number).padStart(3, "0");
+    const firstNames = ["Nethmi", "Kavindu", "Isuri", "Dinuka", "Thilini"];
+    const lastNames = ["Fernando", "Silva", "Perera", "Jayawardena", "Bandara"];
+    return {
+      university_id: `SCI2026${padded}`,
+      full_name: `${firstNames[index]} ${lastNames[departmentIndex % lastNames.length]}`,
+      email: `sci2026${padded}@student.ruhuna.lk`,
+      role: "student",
+      department_name: departmentName,
+    };
+  })
+);
+
+const additionalHods = [
+  {
+    university_id: "HOD003",
+    full_name: "Dr. Menaka Amarasinghe",
+    email: "hod.chemistry@ruhuna.lk",
+    role: "hod",
+    department_name: "Department of Chemistry",
+  },
+  {
+    university_id: "HOD004",
+    full_name: "Dr. Ranjith Ekanayake",
+    email: "hod.zoology@ruhuna.lk",
+    role: "hod",
+    department_name: "Department of Zoology",
+  },
+  {
+    university_id: "HOD006",
+    full_name: "Dr. Lakmal Samarasinghe",
+    email: "hod.physics@ruhuna.lk",
+    role: "hod",
+    department_name: "Department of Physics",
+  },
+];
+
+const additionalLecturers = [
+  ["LEC007", "Dr. Inoka Liyanage", "inoka.liyanage@ruhuna.lk", "Department of Computer Science", "Lecturer", "PhD in Data Science\nMSc in Artificial Intelligence\nBSc Special in Computer Science"],
+  ["LEC008", "Dr. Dinesh Karunaratne", "dinesh.karunaratne@ruhuna.lk", "Department of Mathematics", "Lecturer", "PhD in Pure Mathematics\nBSc Special in Mathematics"],
+  ["LEC009", "Dr. Himashi Nanayakkara", "himashi.nanayakkara@ruhuna.lk", "Department of Chemistry", "Senior Lecturer", "PhD in Organic Chemistry\nBSc Special in Chemistry"],
+  ["LEC010", "Dr. Pubudu Herath", "pubudu.herath@ruhuna.lk", "Department of Zoology", "Lecturer", "PhD in Ecology\nBSc Special in Zoology"],
+  ["LEC011", "Dr. Nadeesha Kulathunga", "nadeesha.kulathunga@ruhuna.lk", "Department of Botany", "Senior Lecturer", "PhD in Plant Biotechnology\nBSc Special in Botany"],
+  ["LEC012", "Dr. Viraj Abeysekara", "viraj.abeysekara@ruhuna.lk", "Department of Physics", "Lecturer", "PhD in Electronics\nBSc Special in Physics"],
+].map(([university_id, full_name, email, department_name, designation, qualifications]) => ({
+  university_id,
+  full_name,
+  email,
+  role: "lecturer",
+  department_name,
+  designation,
+  qualifications,
+}));
+
+const seedUsers = [...baseSeedUsers, ...generatedStudents, ...additionalHods, ...additionalLecturers];
 
 const seedCourses = [
   {
@@ -576,6 +731,54 @@ const seedCourses = [
     semester_name: "Semester 2",
     academic_year: "2025/2026",
   },
+  {
+    course_code: "CSC2122",
+    course_name: "Database Systems",
+    department_name: "Department of Computer Science",
+    lecturer_email: "inoka.liyanage@ruhuna.lk",
+    semester_name: "Semester 1",
+    academic_year: "2025/2026",
+  },
+  {
+    course_code: "MAT2122",
+    course_name: "Real Analysis",
+    department_name: "Department of Mathematics",
+    lecturer_email: "dinesh.karunaratne@ruhuna.lk",
+    semester_name: "Semester 1",
+    academic_year: "2025/2026",
+  },
+  {
+    course_code: "CHE2122",
+    course_name: "Organic Reaction Mechanisms",
+    department_name: "Department of Chemistry",
+    lecturer_email: "himashi.nanayakkara@ruhuna.lk",
+    semester_name: "Semester 1",
+    academic_year: "2025/2026",
+  },
+  {
+    course_code: "ZOO2122",
+    course_name: "Ecology and Conservation",
+    department_name: "Department of Zoology",
+    lecturer_email: "pubudu.herath@ruhuna.lk",
+    semester_name: "Semester 1",
+    academic_year: "2025/2026",
+  },
+  {
+    course_code: "BOT2122",
+    course_name: "Plant Biotechnology",
+    department_name: "Department of Botany",
+    lecturer_email: "nadeesha.kulathunga@ruhuna.lk",
+    semester_name: "Semester 1",
+    academic_year: "2025/2026",
+  },
+  {
+    course_code: "PHY2122",
+    course_name: "Electronics and Instrumentation",
+    department_name: "Department of Physics",
+    lecturer_email: "viraj.abeysekara@ruhuna.lk",
+    semester_name: "Semester 1",
+    academic_year: "2025/2026",
+  },
 ];
 
 const getDepartmentId = async (departmentName) => {
@@ -596,6 +799,11 @@ const getUserIdByEmail = async (email) => {
   return users[0]?.id || null;
 };
 
+const getUserIdByUniversityId = async (universityId) => {
+  const [users] = await query("SELECT id FROM users WHERE university_id = ? LIMIT 1", [universityId]);
+  return users[0]?.id || null;
+};
+
 const seedDemoUsersAndCourses = async () => {
   const hashedPassword = await bcrypt.hash(demoPassword, 10);
 
@@ -606,14 +814,18 @@ const seedDemoUsersAndCourses = async () => {
     }
 
     await query(
-      `INSERT INTO users (full_name, email, password, role, status, department_id)
-       VALUES (?, ?, ?, ?, 'approved', ?)
+      `INSERT INTO users (university_id, full_name, email, password, role, status, department_id, first_login, must_change_password)
+       VALUES (?, ?, ?, ?, ?, 'approved', ?, 1, 1)
        ON DUPLICATE KEY UPDATE
+         university_id = COALESCE(university_id, VALUES(university_id)),
          full_name = VALUES(full_name),
+         password = VALUES(password),
          role = VALUES(role),
          status = 'approved',
-         department_id = VALUES(department_id)`,
-      [user.full_name, user.email, hashedPassword, user.role, departmentId]
+         department_id = VALUES(department_id),
+         first_login = 1,
+         must_change_password = 1`,
+      [user.university_id, user.full_name, user.email, hashedPassword, user.role, departmentId]
     );
 
     if (user.role === "lecturer") {
@@ -662,6 +874,144 @@ const seedDemoUsersAndCourses = async () => {
   }
 };
 
+const seedDemoEvaluationSubmissions = async () => {
+  const [questionsByType] = await query(
+    `SELECT id, type, display_order
+     FROM questions
+     WHERE is_active = 1 AND type IN ('theory', 'practical')
+     ORDER BY type ASC, display_order ASC`
+  );
+
+  const questions = {
+    theory: questionsByType.filter((question) => question.type === "theory").slice(0, 10),
+    practical: questionsByType.filter((question) => question.type === "practical").slice(0, 10),
+  };
+
+  if (questions.theory.length !== 10 || questions.practical.length !== 10) return;
+
+  const [courses] = await query(
+    `SELECT c.id AS courseId, c.course_code AS courseCode, c.lecturer_id AS lecturerId,
+            c.department_id AS departmentId, s.id AS semesterId, s.academic_year AS academicYear
+     FROM courses c
+     INNER JOIN semesters s ON c.semester_id = s.id
+     WHERE c.lecturer_id IS NOT NULL
+     ORDER BY c.course_code ASC
+     LIMIT 14`
+  );
+
+  for (const course of courses) {
+    const [students] = await query(
+      `SELECT id
+       FROM users
+       WHERE role = 'student'
+         AND status = 'approved'
+         AND deleted_at IS NULL
+         AND department_id = ?
+       ORDER BY university_id ASC
+       LIMIT 4`,
+      [course.departmentId]
+    );
+
+    for (const [studentIndex, student] of students.entries()) {
+      for (const type of ["theory", "practical"]) {
+        const grade = Math.max(3, Math.min(5, 5 - ((studentIndex + (type === "practical" ? 0 : 1)) % 3)));
+        const [existing] = await query(
+          `SELECT id
+           FROM evaluation_submissions
+           WHERE student_id = ? AND lecturer_id = ? AND course_id = ? AND semester_id = ? AND academic_year = ? AND type = ?
+           LIMIT 1`,
+          [student.id, course.lecturerId, course.courseId, course.semesterId, course.academicYear, type]
+        );
+
+        let submissionId = existing[0]?.id;
+        if (!submissionId) {
+          const [result] = await query(
+            `INSERT INTO evaluation_submissions
+             (student_id, lecturer_id, course_id, semester_id, academic_year, type, overall_grade, comment_text)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+              student.id,
+              course.lecturerId,
+              course.courseId,
+              course.semesterId,
+              course.academicYear,
+              type,
+              grade,
+              `Demo ${type} evaluation for ${course.courseCode}.`,
+            ]
+          );
+          submissionId = result.insertId;
+        }
+
+        const [responseCount] = await query(
+          "SELECT COUNT(*) AS count FROM evaluation_responses WHERE submission_id = ?",
+          [submissionId]
+        );
+        if (Number(responseCount[0]?.count || 0) > 0) continue;
+
+        for (const question of questions[type]) {
+          const score = Math.max(1, Math.min(5, grade - ((question.display_order + studentIndex) % 2 === 0 ? 0 : 1)));
+          await query(
+            "INSERT INTO evaluation_responses (submission_id, question_id, score) VALUES (?, ?, ?)",
+            [submissionId, question.id, score]
+          );
+        }
+      }
+    }
+  }
+};
+
+const seedDemoNotifications = async () => {
+  const demoNotifications = [
+    ["ADM001", "Demo System Ready", "The LES demo database has users, modules, evaluation data, and notifications for testing.", "system"],
+    ["SCI2026001", "Evaluation Window Open", "You can submit lecturer evaluations for Semester 1 - 2025/2026.", "info"],
+    ["LEC005", "Module Assignment", "You have demo module assignments and sample evaluation charts available.", "info"],
+    ["HOD005", "Department Analytics Ready", "Sample department evaluation data is available for dashboard testing.", "info"],
+    ["DEAN001", "Faculty Analytics Ready", "Sample faculty-wide evaluation data is available for dashboard testing.", "info"],
+  ];
+
+  for (const [universityId, title, message, type] of demoNotifications) {
+    const userId = await getUserIdByUniversityId(universityId);
+    if (!userId) continue;
+
+    await query(
+      `INSERT INTO notifications (user_id, title, message, type, related_entity_type)
+       SELECT ?, ?, ?, ?, 'demo_seed'
+       WHERE NOT EXISTS (
+         SELECT 1 FROM notifications
+         WHERE user_id = ? AND title = ? AND related_entity_type = 'demo_seed'
+         LIMIT 1
+       )`,
+      [userId, title, message, type, userId, title]
+    );
+  }
+};
+
+const backfillMissingUniversityIds = async () => {
+  const prefixes = {
+    student: "SCI2026",
+    lecturer: "LEC",
+    hod: "HOD",
+    dean: "DEAN",
+    admin: "ADM",
+  };
+
+  const [users] = await query(
+    "SELECT id, role FROM users WHERE university_id IS NULL OR university_id = '' ORDER BY id ASC"
+  );
+
+  const counters = { student: 900, lecturer: 900, hod: 900, dean: 900, admin: 900 };
+
+  for (const user of users) {
+    const prefix = prefixes[user.role] || "UOR";
+    counters[user.role] = (counters[user.role] || 900) + 1;
+    const universityId = user.role === "student"
+      ? `${prefix}${String(counters[user.role]).padStart(3, "0")}`
+      : `${prefix}${String(counters[user.role]).padStart(3, "0")}`;
+    await query("UPDATE users SET university_id = ? WHERE id = ?", [universityId, user.id]);
+  }
+};
+
 export const initializeDatabase = async () => {
   for (const statement of createTables) {
     await query(statement);
@@ -701,14 +1051,28 @@ export const initializeDatabase = async () => {
     );
   }
 
-  const [existingAdmin] = await query("SELECT id FROM users WHERE email = ? LIMIT 1", [defaultAdmin.email]);
+  const [existingAdmin] = await query("SELECT id, university_id FROM users WHERE email = ? LIMIT 1", [defaultAdmin.email]);
   if (existingAdmin.length === 0) {
     const hashedPassword = await bcrypt.hash(defaultAdmin.password, 10);
     await query(
-      "INSERT INTO users (full_name, email, password, role, status, department_id) VALUES (?, ?, ?, 'admin', 'approved', ?)",
-      [defaultAdmin.full_name, defaultAdmin.email, hashedPassword, defaultAdmin.department_id]
+      "INSERT INTO users (university_id, full_name, email, password, role, status, department_id, first_login, must_change_password) VALUES (?, ?, ?, ?, 'admin', 'approved', ?, 0, 0)",
+      [defaultAdmin.university_id, defaultAdmin.full_name, defaultAdmin.email, hashedPassword, defaultAdmin.department_id]
+    );
+  } else {
+    const hashedPassword = await bcrypt.hash(defaultAdmin.password, 10);
+    await query(
+      `UPDATE users
+       SET university_id = COALESCE(university_id, ?),
+           password = ?,
+           first_login = 0,
+           must_change_password = 0
+       WHERE email = ?`,
+      [defaultAdmin.university_id, hashedPassword, defaultAdmin.email]
     );
   }
 
   await seedDemoUsersAndCourses();
+  await backfillMissingUniversityIds();
+  await seedDemoEvaluationSubmissions();
+  await seedDemoNotifications();
 };

@@ -28,7 +28,7 @@ const LandingPage = () => {
 
       <section className="relative overflow-hidden bg-gradient-to-br from-brandBlue via-slate-900 to-slate-800 px-4 py-20 text-white sm:px-6 lg:px-8">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(212,175,55,0.25),transparent_35%),radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.12),transparent_28%)]" />
-        <div className="relative mx-auto grid max-w-7xl gap-12 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
+        <div className="relative grid w-full gap-12 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
           <div>
             <div className="inline-flex rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.35em] text-brandGold">
               Faculty of Science | University of Ruhuna
@@ -40,11 +40,11 @@ const LandingPage = () => {
               A clean academic platform for lecturer evaluation, account approvals, announcements, and department administration.
             </p>
             <div className="mt-8 flex flex-wrap gap-4">
-              <Link to="/login" className="rounded-full bg-brandGold px-6 py-3 font-semibold text-white transition hover:opacity-90">
-                Login
+              <Link to="/login?mode=student" className="rounded-full bg-brandGold px-6 py-3 font-semibold text-white transition hover:opacity-90">
+                Student Login
               </Link>
-              <Link to="/register" className="rounded-full border border-white/30 px-6 py-3 font-semibold text-white transition hover:bg-white hover:text-brandBlue">
-                Sign Up
+              <Link to="/login?mode=staff" className="rounded-full border border-white/30 px-6 py-3 font-semibold text-white transition hover:bg-white hover:text-brandBlue">
+                Staff Login
               </Link>
             </div>
           </div>
@@ -53,18 +53,18 @@ const LandingPage = () => {
             <div className="rounded-2xl bg-white p-6 text-brandText shadow-xl">
               <div className="text-sm font-semibold uppercase tracking-[0.3em] text-brandGold">System Flow</div>
               <ol className="mt-4 space-y-3 text-sm leading-6 text-slate-700">
-                <li>1. Students and lecturers register.</li>
-                <li>2. Accounts are stored as pending.</li>
-                <li>3. Admin approves accounts.</li>
-                <li>4. Approved users can log in.</li>
-                <li>5. Admin manages departments, semesters, courses, and announcements.</li>
+                <li>1. Admin creates student and staff accounts.</li>
+                <li>2. Users receive a University ID and default password.</li>
+                <li>3. Students log in with University ID.</li>
+                <li>4. Staff log in with University ID or email.</li>
+                <li>5. Users change the default password on first login.</li>
               </ol>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
+      <section className="w-full px-4 py-16 sm:px-6 lg:px-10">
         <div className="flex items-end justify-between gap-4">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.3em] text-brandGold">Announcements</p>

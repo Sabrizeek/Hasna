@@ -1,16 +1,10 @@
-import { Navigate, Outlet } from "react-router-dom";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
-
-const roleHome = {
-  admin: "/admin/dashboard",
-  student: "/student/dashboard",
-  lecturer: "/lecturer/dashboard",
-  hod: "/hod/dashboard",
-  dean: "/dean/dashboard",
-};
+import UnauthorizedAccess from "./UnauthorizedAccess.jsx";
 
 const ProtectedRoute = ({ roles }) => {
   const { user, loading } = useAuth();
+  const location = useLocation();
 
   if (loading) {
     return <div className="flex min-h-screen items-center justify-center">Loading...</div>;
@@ -20,8 +14,12 @@ const ProtectedRoute = ({ roles }) => {
     return <Navigate to="/login" replace />;
   }
 
+  if (user.mustChangePassword && location.pathname !== "/change-password") {
+    return <Navigate to="/change-password" replace />;
+  }
+
   if (roles && !roles.includes(user.role)) {
-    return <Navigate to={roleHome[user.role] || "/login"} replace />;
+    return <UnauthorizedAccess />;
   }
 
   return <Outlet />;

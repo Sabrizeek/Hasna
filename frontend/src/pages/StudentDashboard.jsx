@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios.js";
+import DashboardAnnouncements from "../components/DashboardAnnouncements.jsx";
 import StudentLayout from "../components/StudentLayout.jsx";
 
 const StudentDashboard = () => {
@@ -323,6 +324,9 @@ const StudentDashboard = () => {
           </div>
         </aside>
       </section>
+      <div className="mt-8">
+        <DashboardAnnouncements accent="teal" />
+      </div>
     </StudentLayout>
   );
 };
