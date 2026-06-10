@@ -623,6 +623,17 @@ const generatedStudents = [
   })
 );
 
+const malshaCommentStudents = Array.from({ length: 20 }, (_, index) => {
+  const number = String(index + 1).padStart(2, "0");
+  return {
+    university_id: `ZOO2026C${number}`,
+    full_name: `Zoology Comment Student ${number}`,
+    email: `zoo.comment${number}@student.ruhuna.lk`,
+    role: "student",
+    department_name: "Department of Zoology",
+  };
+});
+
 const additionalHods = [
   {
     university_id: "HOD003",
@@ -664,7 +675,7 @@ const additionalLecturers = [
   qualifications,
 }));
 
-const seedUsers = [...baseSeedUsers, ...generatedStudents, ...additionalHods, ...additionalLecturers];
+const seedUsers = [...baseSeedUsers, ...generatedStudents, ...malshaCommentStudents, ...additionalHods, ...additionalLecturers];
 
 const seedCourses = [
   {
@@ -804,6 +815,44 @@ const getUserIdByUniversityId = async (universityId) => {
   return users[0]?.id || null;
 };
 
+const demoEvaluationComments = {
+  theory: [
+    "The lecturer explained the concepts clearly and connected them with real-world examples. The lecture slides were useful, but sometimes the pace was a little fast during difficult topics.",
+    "The lecturer has strong subject knowledge and answers questions patiently. It would be helpful if more revision questions were provided before assessments.",
+    "The lectures were organized and the examples made the subject easier to understand. More short class activities would help students stay engaged throughout the session.",
+    "The lecturer communicates well and makes complex ideas approachable. Some topics need a little more time because the final part of the lecture can feel rushed.",
+  ],
+  practical: [
+    "The practical session was well organized and the demonstrations helped us understand the experiment. More time for individual practice would make the session even better.",
+    "The lecturer gave clear safety instructions and guided students during the laboratory work. It would help if equipment and materials were checked earlier to avoid delays.",
+    "The procedures were explained clearly before we started and feedback was useful. More examples of common errors would help us improve our practical records.",
+    "The practical work helped us develop useful scientific skills. The session would be stronger with a little more time for discussion after completing the activity.",
+  ],
+};
+
+const malshaLongTheoryComments = [
+  "Dr. Malsha explains zoology concepts in a clear and calm way, especially when moving from basic animal structures to more complex physiological functions. The real-world examples from local ecosystems make the lectures easier to remember. Sometimes the lecture moves quickly near the end, so a slower recap of the final topic would help.",
+  "The lecturer shows strong subject knowledge and uses diagrams effectively to explain difficult zoology content. I liked how questions were answered patiently during the lecture. It would be useful to have a few more revision questions before quizzes so students can check whether they understood the main ideas.",
+  "The lectures are organized in a logical sequence, and each topic connects well with the previous one. The examples about animal adaptation and conservation make the lessons meaningful. More short activities during the lecture would help students stay focused during longer theory sessions.",
+  "Dr. Malsha communicates clearly and makes complicated biological processes approachable. The lecture slides are useful because they include diagrams and key terms. Some difficult sections, especially classification details, need a little more time before moving to the next topic.",
+  "The lecturer explains the main concepts clearly and gives relevant examples from animal behavior and biodiversity. Students can ask questions without feeling rushed, which helps a lot. More practice questions at the end of each lecture would make exam preparation easier.",
+  "The lecture materials are useful and the structure of the class is easy to follow. I appreciate the way Dr. Malsha repeats important points before starting a new section. The only suggestion is to slow down when several new scientific names are introduced in one lecture.",
+  "The subject knowledge is excellent, and the lecturer connects theory with examples from field observations and conservation issues. The class feels well organized and professional. A few short discussion questions in the middle of the lecture would make students more active.",
+  "The explanations are clear, and the lecturer uses simple language before introducing technical zoology terms. The slides help us follow the lecture, especially when diagrams are included. More time for the final examples would help because the end of the lecture sometimes feels rushed.",
+  "Dr. Malsha answers student questions patiently and gives extra explanation when many students are confused. The real-world examples make animal physiology easier to understand. It would be helpful if the lecturer shared more revision questions after completing each major unit.",
+  "The lecture is organized and the lecturer communicates in a friendly and professional way. Complex ideas are broken into smaller parts, which makes the topic less difficult. More short class activities would help students remain engaged throughout the full lecture period.",
+  "The lecturer explains animal form and function clearly with useful examples from different species. The slides are helpful for reviewing after class. Sometimes the pace is fast during dense theory sections, so a slower explanation of those parts would improve understanding.",
+  "I like how the lecturer connects zoology theory with real-world environmental examples. The explanations are usually clear and the lecture order is easy to follow. More revision questions before assessments would help students identify weak areas early.",
+  "Dr. Malsha has strong subject knowledge and presents the lecture confidently. Questions from students are answered patiently, and that makes the class comfortable. It would be better to include a few short activities or quick checks after difficult topics.",
+  "The lectures are well organized, and the important learning outcomes are usually clear. The examples make the subject easier to understand, especially when comparing animal systems. Some topics need a little more time because the final part can feel compressed.",
+  "The lecturer communicates well and explains difficult concepts in a way that most students can follow. Useful slides and diagrams support the explanation. More practice or revision questions would help us prepare for theory assessments.",
+  "The teaching quality is good because the lecturer combines clear explanations with real-world zoology examples. Students are encouraged to ask questions, and answers are given patiently. The lecture would be stronger if difficult parts were covered at a slightly slower pace.",
+  "The class is structured well, and Dr. Malsha explains the relationship between form, function, and habitat clearly. The examples are relevant and memorable. More short class activities would keep the class engaged during longer lecture blocks.",
+  "The lecture slides are useful, especially for diagrams and classification summaries. The lecturer has strong knowledge of the subject and explains concepts with confidence. More time for reviewing the last section of each lecture would help students understand it better.",
+  "The lecturer makes complex zoology ideas approachable by starting with simple explanations and then adding detail. The real-world examples and organized lecture flow are helpful. A small set of revision questions after each lecture would support assessment preparation.",
+  "Overall, the lectures are clear, organized, and connected to practical examples from animals and ecosystems. Dr. Malsha answers questions patiently and communicates well. The main improvement would be to slow down near the end of lectures and include short activities to keep students engaged.",
+];
+
 const seedDemoUsersAndCourses = async () => {
   const hashedPassword = await bcrypt.hash(demoPassword, 10);
 
@@ -812,17 +861,18 @@ const seedDemoUsersAndCourses = async () => {
     if (!departmentId) {
       continue;
     }
+    const mustChangePassword = ["hod", "dean"].includes(user.role) ? 0 : 1;
 
     await query(
       `INSERT INTO users (university_id, full_name, email, password, role, status, department_id, first_login, must_change_password)
-       VALUES (?, ?, ?, ?, ?, 'approved', ?, 1, 1)
+       VALUES (?, ?, ?, ?, ?, 'approved', ?, ?, ?)
        ON DUPLICATE KEY UPDATE
          university_id = COALESCE(university_id, VALUES(university_id)),
          full_name = VALUES(full_name),
          role = VALUES(role),
          status = 'approved',
          department_id = VALUES(department_id)`,
-      [user.university_id, user.full_name, user.email, hashedPassword, user.role, departmentId]
+      [user.university_id, user.full_name, user.email, hashedPassword, user.role, departmentId, mustChangePassword, mustChangePassword]
     );
 
     if (user.role === "lecturer") {
@@ -871,6 +921,70 @@ const seedDemoUsersAndCourses = async () => {
   }
 };
 
+const seedMalshaLongCommentSubmissions = async (questions) => {
+  const [courseRows] = await query(
+    `SELECT c.id AS courseId, c.lecturer_id AS lecturerId, s.id AS semesterId, s.academic_year AS academicYear
+     FROM courses c
+     INNER JOIN semesters s ON c.semester_id = s.id
+     WHERE c.course_code = 'ZOO1122'
+       AND c.lecturer_id = (SELECT id FROM users WHERE email = 'malsha.weerasinghe@ruhuna.lk' LIMIT 1)
+     LIMIT 1`
+  );
+  const course = courseRows[0];
+  if (!course || questions.theory.length !== 10) return;
+
+  for (const [index, comment] of malshaLongTheoryComments.entries()) {
+    const universityId = `ZOO2026C${String(index + 1).padStart(2, "0")}`;
+    const [students] = await query(
+      "SELECT id FROM users WHERE university_id = ? AND role = 'student' AND deleted_at IS NULL LIMIT 1",
+      [universityId]
+    );
+    const student = students[0];
+    if (!student) continue;
+
+    const grade = index % 5 === 0 ? 5 : index % 4 === 0 ? 3 : 4;
+    const [existing] = await query(
+      `SELECT id
+       FROM evaluation_submissions
+       WHERE student_id = ? AND lecturer_id = ? AND course_id = ? AND semester_id = ? AND academic_year = ? AND type = 'theory'
+       LIMIT 1`,
+      [student.id, course.lecturerId, course.courseId, course.semesterId, course.academicYear]
+    );
+
+    let submissionId = existing[0]?.id;
+    if (!submissionId) {
+      const [result] = await query(
+        `INSERT INTO evaluation_submissions
+         (student_id, lecturer_id, course_id, semester_id, academic_year, type, overall_grade, comment_text)
+         VALUES (?, ?, ?, ?, ?, 'theory', ?, ?)`,
+        [student.id, course.lecturerId, course.courseId, course.semesterId, course.academicYear, grade, comment]
+      );
+      submissionId = result.insertId;
+    } else {
+      await query(
+        `UPDATE evaluation_submissions
+         SET overall_grade = ?, comment_text = ?
+         WHERE id = ?`,
+        [grade, comment, submissionId]
+      );
+    }
+
+    const [responseCount] = await query(
+      "SELECT COUNT(*) AS count FROM evaluation_responses WHERE submission_id = ?",
+      [submissionId]
+    );
+    if (Number(responseCount[0]?.count || 0) > 0) continue;
+
+    for (const question of questions.theory) {
+      const score = Math.max(1, Math.min(5, grade - ((question.display_order + index) % 3 === 0 ? 1 : 0)));
+      await query(
+        "INSERT INTO evaluation_responses (submission_id, question_id, score) VALUES (?, ?, ?)",
+        [submissionId, question.id, score]
+      );
+    }
+  }
+};
+
 const seedDemoEvaluationSubmissions = async () => {
   const [questionsByType] = await query(
     `SELECT id, type, display_order
@@ -912,6 +1026,7 @@ const seedDemoEvaluationSubmissions = async () => {
     for (const [studentIndex, student] of students.entries()) {
       for (const type of ["theory", "practical"]) {
         const grade = Math.max(3, Math.min(5, 5 - ((studentIndex + (type === "practical" ? 0 : 1)) % 3)));
+        const comment = demoEvaluationComments[type][studentIndex % demoEvaluationComments[type].length];
         const [existing] = await query(
           `SELECT id
            FROM evaluation_submissions
@@ -934,10 +1049,18 @@ const seedDemoEvaluationSubmissions = async () => {
               course.academicYear,
               type,
               grade,
-              `Demo ${type} evaluation for ${course.courseCode}.`,
+              comment,
             ]
           );
           submissionId = result.insertId;
+        } else {
+          await query(
+            `UPDATE evaluation_submissions
+             SET comment_text = ?
+             WHERE id = ?
+               AND (comment_text IS NULL OR comment_text LIKE 'Demo % evaluation for %.')`,
+            [comment, submissionId]
+          );
         }
 
         const [responseCount] = await query(
@@ -956,6 +1079,8 @@ const seedDemoEvaluationSubmissions = async () => {
       }
     }
   }
+
+  await seedMalshaLongCommentSubmissions(questions);
 };
 
 const seedDemoNotifications = async () => {

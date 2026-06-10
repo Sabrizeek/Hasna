@@ -65,7 +65,7 @@ const ModuleAssignmentManagement = () => {
         <div className="space-y-6">
           <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
             <h3 className="text-xl font-bold text-brandBlue">Departments & Courses</h3>
-            <div className="mt-5 space-y-4">
+            <div className="mt-5 max-h-[28rem] space-y-4 overflow-y-auto pr-2">
               {departments.map((department) => (
                 <div key={department.id} className="rounded-2xl bg-slate-50 p-4">
                   <p className="font-semibold text-slate-900">{department.department_name}</p>
@@ -97,16 +97,16 @@ const ModuleAssignmentManagement = () => {
 
         <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
           <h3 className="text-xl font-bold text-brandBlue">Module-Lecturer Assignments</h3>
-          <div className="mt-5 overflow-x-auto">
-            <table className="min-w-full text-left text-sm">
-              <thead className="text-slate-500"><tr><th className="py-3 pr-4">Module</th><th className="py-3 pr-4">Semester</th><th className="py-3 pr-4">Lecturer</th><th className="py-3 pr-4">Action</th></tr></thead>
+          <div className="mt-5 max-h-[34rem] overflow-y-auto overflow-x-hidden">
+            <table className="w-full table-fixed text-left text-sm [&_td]:break-words [&_th]:break-words">
+              <thead className="sticky top-0 z-10 bg-white text-slate-500"><tr><th className="py-3 pr-4">Module</th><th className="py-3 pr-4">Semester</th><th className="py-3 pr-4">Lecturer</th><th className="py-3 pr-4">Action</th></tr></thead>
               <tbody>
                 {assignments.map((assignment) => (
                   <tr key={assignment.id} className="border-t border-slate-100">
                     <td className="py-4 pr-4 font-semibold">{assignment.course_code} - {assignment.course_name}</td>
                     <td className="py-4 pr-4 text-slate-600">{assignment.semester_name} - {assignment.academic_year}</td>
                     <td className="py-4 pr-4 text-slate-600">{assignment.lecturer_name}</td>
-                    <td className="py-4 pr-4"><button onClick={() => removeAssignment(assignment.id)} className="rounded-full bg-red-600 px-4 py-2 text-xs font-semibold text-white">Remove</button></td>
+                    <td className="py-4 pr-4 whitespace-nowrap"><button onClick={() => removeAssignment(assignment.id)} className="rounded-full bg-red-600 px-4 py-2 text-xs font-semibold text-white">Remove</button></td>
                   </tr>
                 ))}
               </tbody>

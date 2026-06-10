@@ -7,6 +7,7 @@ import {
   getEvaluationResults,
   getLecturerModules,
   getSupervisionReports,
+  summarizeLecturerComments,
   uploadSupervisionReport,
 } from "../controllers/lecturerController.js";
 
@@ -16,6 +17,7 @@ router.use(requireAuth, requireRole("lecturer"));
 
 router.get("/modules", getLecturerModules);
 router.get("/evaluation-results/:courseId", getEvaluationResults);
+router.post("/comments/summarize", summarizeLecturerComments);
 router.get("/supervision-reports", getSupervisionReports);
 router.post("/supervision-reports", supervisionReportUpload.single("report"), uploadSupervisionReport);
 router.get("/supervision-reports/:reportId/download", downloadSupervisionReport);

@@ -62,7 +62,7 @@ const LecturerLayout = ({ children }) => {
             <p className="mt-2 text-sm font-semibold">{user?.full_name}</p>
             <p className="mt-1 text-xs text-sky-100">{user?.department_name || "Faculty of Science"}</p>
           </div>
-          <nav className="flex gap-2 overflow-x-auto lg:flex-col lg:overflow-visible">
+          <nav className="flex flex-wrap gap-2 lg:flex-col">
             {navItems.map((item) => {
               const isActive = isActiveItem(item);
               return (
@@ -79,7 +79,7 @@ const LecturerLayout = ({ children }) => {
             })}
           </nav>
         </aside>
-        <main className="min-w-0">{children}</main>
+        <main className="min-w-0 overflow-x-hidden">{children}</main>
       </div>
     </div>
   );

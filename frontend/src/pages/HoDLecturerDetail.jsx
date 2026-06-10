@@ -143,8 +143,9 @@ const HoDLecturerDetail = () => {
               </div>
             ) : (
               <div className="mt-6 overflow-hidden rounded-3xl border border-slate-200">
-                <table className="min-w-full text-left text-sm">
-                  <thead className="bg-slate-900 text-white">
+                <div className="max-h-[30rem] overflow-y-auto overflow-x-hidden">
+                <table className="w-full table-fixed text-left text-sm [&_td]:break-words [&_th]:break-words">
+                  <thead className="sticky top-0 z-10 bg-slate-900 text-white">
                     <tr>
                       <th className="px-5 py-4 font-semibold">Title</th>
                       <th className="px-5 py-4 font-semibold">Submitted Date</th>
@@ -160,7 +161,7 @@ const HoDLecturerDetail = () => {
                         <td className="px-5 py-4 font-semibold text-slate-950">{report.title}</td>
                         <td className="px-5 py-4 text-slate-600">{new Date(report.submitted_at).toLocaleDateString()}</td>
                         <td className="px-5 py-4 capitalize text-slate-600">{report.status.replace("_", " ")}</td>
-                        <td className="px-5 py-4">
+                        <td className="px-5 py-4 whitespace-nowrap">
                           <button onClick={() => downloadReport(report)} className="rounded-full border border-amber-200 px-4 py-2 text-xs font-semibold text-amber-700 hover:bg-amber-50">
                             View/Download
                           </button>
@@ -169,6 +170,7 @@ const HoDLecturerDetail = () => {
                     ))}
                   </tbody>
                 </table>
+                </div>
               </div>
             )}
           </>

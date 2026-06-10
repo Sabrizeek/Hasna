@@ -191,9 +191,9 @@ const HoDDashboard = () => {
         </div>
 
         <div className="mt-8 overflow-hidden rounded-3xl border border-slate-200">
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-left text-sm">
-              <thead className="bg-slate-900 text-white">
+          <div className="max-h-[32rem] overflow-y-auto overflow-x-hidden">
+            <table className="w-full table-fixed text-left text-sm [&_td]:break-words [&_th]:break-words">
+              <thead className="sticky top-0 z-10 bg-slate-900 text-white">
                 <tr>
                   {[
                     ["name", "Name"],
@@ -207,7 +207,7 @@ const HoDDashboard = () => {
                       <button type="button" onClick={() => handleSort(key)}>{label}</button>
                     </th>
                   ))}
-                  <th className="px-5 py-4 font-semibold">Action</th>
+                  <th className="w-40 px-5 py-4 font-semibold">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -219,10 +219,10 @@ const HoDDashboard = () => {
                     <td className="px-5 py-4 text-slate-600">{lecturer.practicalScore}</td>
                     <td className="px-5 py-4 font-bold text-amber-700">{lecturer.overallScore}</td>
                     <td className="px-5 py-4 text-slate-600">{lecturer.reportsSubmitted}</td>
-                    <td className="px-5 py-4">
+                    <td className="w-40 px-5 py-4 whitespace-nowrap">
                       <Link
                         to={`/hod/lecturers/${lecturer.lecturerId}?semesterId=${filters.semesterId}&academicYear=${encodeURIComponent(filters.academicYear)}`}
-                        className="rounded-full border border-amber-200 px-4 py-2 text-xs font-semibold text-amber-700 hover:bg-amber-50"
+                        className="inline-flex min-w-[7rem] justify-center whitespace-nowrap rounded-full border border-amber-200 px-4 py-2 text-xs font-semibold text-amber-700 hover:bg-amber-50"
                       >
                         View Details
                       </Link>

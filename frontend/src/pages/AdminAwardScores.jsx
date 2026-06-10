@@ -179,7 +179,8 @@ const AdminAwardScores = () => {
         </div>
       </section>
 
-      <section className="mt-6 grid gap-5 xl:grid-cols-2">
+      <section className="mt-6 max-h-[48rem] overflow-y-auto pr-2">
+        <div className="grid gap-5 xl:grid-cols-2">
         {filteredLecturers.map((lecturer) => {
           const draft = draftScores[lecturer.lecturerId] || {};
           const liveSupervisionScore = Number(draft.supervisionScore || 0);
@@ -261,6 +262,7 @@ const AdminAwardScores = () => {
             No lecturers match the selected filters or search.
           </div>
         )}
+        </div>
       </section>
     </AdminLayout>
   );

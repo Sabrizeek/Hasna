@@ -117,9 +117,9 @@ const CourseManagement = () => {
         </form>
 
         <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-left text-sm">
-              <thead>
+          <div className="max-h-[34rem] overflow-y-auto overflow-x-hidden">
+            <table className="w-full table-fixed text-left text-sm [&_td]:break-words [&_th]:break-words">
+              <thead className="sticky top-0 z-10 bg-white">
                 <tr className="text-slate-500">
                   <th className="py-3 pr-4 font-semibold">Code</th>
                   <th className="py-3 pr-4 font-semibold">Course</th>
@@ -137,8 +137,8 @@ const CourseManagement = () => {
                     <td className="py-4 pr-4 text-slate-600">{course.department_name}</td>
                     <td className="py-4 pr-4 text-slate-600">{course.lecturer_name || "Not assigned"}</td>
                     <td className="py-4 pr-4 text-slate-600">{course.semester_name}</td>
-                    <td className="py-4 pr-4">
-                      <div className="flex gap-2">
+                    <td className="py-4 pr-4 whitespace-nowrap">
+                      <div className="inline-flex flex-nowrap gap-2">
                         <button onClick={() => handleEdit(course)} type="button" className="rounded-full border border-brandBlue px-4 py-2 text-xs font-semibold text-brandBlue">Edit</button>
                         <button onClick={() => handleDelete(course.id)} type="button" className="rounded-full bg-red-600 px-4 py-2 text-xs font-semibold text-white">Delete</button>
                       </div>

@@ -183,9 +183,9 @@ const LecturerSupervisionReports = () => {
           ) : reports.length === 0 ? (
             <div className="p-5 text-sm font-medium text-amber-700">No supervision reports have been submitted yet.</div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-left text-sm">
-                <thead className="bg-slate-50 text-slate-500">
+            <div className="max-h-[28rem] overflow-y-auto overflow-x-hidden">
+              <table className="w-full table-fixed text-left text-sm [&_td]:break-words [&_th]:break-words">
+                <thead className="sticky top-0 z-10 bg-slate-50 text-slate-500">
                   <tr>
                     <th className="px-5 py-3 font-semibold">Report Title</th>
                     <th className="px-5 py-3 font-semibold">Submitted Date</th>
@@ -198,7 +198,7 @@ const LecturerSupervisionReports = () => {
                     <tr key={report.id} className="border-t border-slate-100">
                       <td className="px-5 py-4 font-semibold text-slate-900">{report.title}</td>
                       <td className="px-5 py-4 text-slate-600">{new Date(report.submitted_at).toLocaleDateString()}</td>
-                      <td className="px-5 py-4">
+                      <td className="px-5 py-4 whitespace-nowrap">
                         <span className={`rounded-full px-3 py-1 text-xs font-bold capitalize ${statusStyles[report.status] || "bg-slate-100 text-slate-700"}`}>
                           {formatStatus(report.status)}
                         </span>

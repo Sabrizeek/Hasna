@@ -18,6 +18,7 @@ Full-stack Lecturer Evaluation System for the Faculty of Science, University of 
 - Lecturer evaluation questionnaires for theory and practical modules.
 - Evaluation windows controlled by Admin.
 - Lecturer results charts with anonymous student responses.
+- AI-assisted anonymous student comment summarization for lecturers.
 - HoD and Dean analytics with privacy-safe aggregated data.
 - Supervision report upload, review, status tracking, and award scoring.
 - Global notifications and audit logs.
@@ -68,6 +69,15 @@ SMTP_USER=your_email@gmail.com
 SMTP_PASS=your_gmail_app_password_without_spaces
 SMTP_FROM="Lecturer Evaluation System <your_email@gmail.com>"
 ```
+
+AI comment summarization works with a built-in rule-based fallback. If you want to connect an external Claude model, add:
+
+```env
+CLAUDE_API_KEY=your_key_here
+CLAUDE_MODEL=your_model_name_here
+```
+
+If these values are not set, lecturer comment summaries still work through the local fallback summarizer.
 
 Frontend API URL lives in `frontend/.env`:
 
@@ -211,6 +221,7 @@ Lecturer:
 - Change default password if prompted.
 - View assigned modules.
 - View evaluation result charts.
+- Summarize anonymous student comments from the evaluation results page.
 - Confirm no student identity appears.
 - Upload supervision report.
 - Track status and notifications.
@@ -249,6 +260,7 @@ Admin:
 - Protected frontend routes enforce role checks and show a clean 403 page for wrong-role access.
 - Protected backend APIs use auth and role middleware.
 - Student submission APIs use authenticated JWT user ID, not student IDs from request bodies.
+- AI comment summarization uses anonymous comment text only and does not expose student identity to lecturers.
 - Password hashes are never returned by API responses.
 - SQL queries use parameterized values.
 

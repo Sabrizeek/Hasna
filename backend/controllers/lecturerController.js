@@ -3,6 +3,7 @@ import path from "path";
 import { query } from "../config/db.js";
 import { supervisionReportsUploadDir } from "../utils/uploadDirectories.js";
 import { notifyAdmins } from "../utils/notificationService.js";
+import { summarizeCommentTexts } from "../services/aiSummarizerService.js";
 
 const parsePositiveInt = (value) => {
   const parsed = Number(value);
@@ -176,6 +177,63 @@ export const getEvaluationResults = async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ message: "Failed to fetch evaluation results.", error: error.message });
+  }
+};
+
+export const summarizeLecturerComments = async (req, res) => {
+  try {
+    const lecturerId = req.user.id;
+    const courseId = parsePositiveInt(req.body.courseId);
+    const semesterId = parsePositiveInt(req.body.semesterId);
+    const academicYear = req.body.academicYear?.trim();
+    const type = req.body.type?.trim();
+
+    if (!courseId || !semesterId || !academicYear || !["theory", "practical"].includes(type)) {
+      return res.status(400).json({ message: "Course, semester, academic year and valid type are required." });
+    }
+
+    const course = await getAccessibleCourse(lecturerId, courseId, semesterId, academicYear);
+    if (!course) {
+      return res.status(404).json({ message: "Module not found for this lecturer." });
+    }
+
+    const [rows] = await query(
+      `SELECT comment_text
+       FROM evaluation_submissions
+       WHERE lecturer_id = ?
+         AND course_id = ?
+         AND semester_id = ?
+         AND academic_year = ?
+         AND type = ?
+         AND comment_text IS NOT NULL
+         AND TRIM(comment_text) <> ''
+       ORDER BY submitted_at DESC`,
+      [lecturerId, courseId, semesterId, academicYear, type]
+    );
+
+    const comments = rows.map((row) => row.comment_text);
+    if (comments.length === 0) {
+      return res.json({
+        totalComments: 0,
+        summary: "No student comments are available for summarization.",
+        keyStrengths: [],
+        improvementAreas: [],
+        commonThemes: [],
+        generatedAt: new Date().toISOString(),
+      });
+    }
+
+    const summary = await summarizeCommentTexts(comments);
+    res.json({
+      totalComments: comments.length,
+      summary: summary.summary,
+      keyStrengths: summary.keyStrengths || [],
+      improvementAreas: summary.improvementAreas || [],
+      commonThemes: summary.commonThemes || [],
+      generatedAt: new Date().toISOString(),
+    });
+  } catch {
+    res.status(500).json({ message: "Unable to summarize comments right now. Please try again later." });
   }
 };
 

@@ -48,7 +48,7 @@ const StudentLayout = ({ children }) => {
       <div className="w-full min-w-0 px-4 pb-8 pt-28 sm:px-6 lg:px-10 lg:pl-[310px]">
         <aside className="mb-6 rounded-3xl border border-teal-100 bg-white p-3 shadow-sm lg:fixed lg:left-8 lg:top-28 lg:mb-0 lg:w-[250px]">
           <p className="px-3 py-2 text-xs font-bold uppercase tracking-[0.25em] text-teal-600">Student</p>
-          <nav className="flex gap-2 overflow-x-auto lg:flex-col lg:overflow-visible">
+          <nav className="flex flex-wrap gap-2 lg:flex-col">
             {navItems.map((item) => {
               const active = location.pathname === item.to;
               return (
@@ -59,7 +59,7 @@ const StudentLayout = ({ children }) => {
             })}
           </nav>
         </aside>
-        <main className="min-w-0">{children}</main>
+        <main className="min-w-0 overflow-x-hidden">{children}</main>
       </div>
     </div>
   );

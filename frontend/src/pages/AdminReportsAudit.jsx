@@ -218,9 +218,9 @@ const AdminReportsAudit = () => {
         </div>
         {evaluationError && <p className="mt-3 text-sm font-semibold text-red-600">{evaluationError}</p>}
 
-        <div className="mt-5 overflow-x-auto">
-          <table className="min-w-full text-left text-sm">
-            <thead className="text-slate-500">
+        <div className="mt-5 max-h-[34rem] overflow-y-auto overflow-x-hidden">
+          <table className="w-full table-fixed text-left text-xs sm:text-sm [&_td]:break-words [&_th]:break-words">
+            <thead className="sticky top-0 z-10 bg-white text-slate-500">
               <tr><th className="py-3 pr-4">Submitted</th><th className="py-3 pr-4">University ID</th><th className="py-3 pr-4">Student</th><th className="py-3 pr-4">Student Email</th><th className="py-3 pr-4">Department</th><th className="py-3 pr-4">Course</th><th className="py-3 pr-4">Lecturer</th><th className="py-3 pr-4">Type</th><th className="py-3 pr-4">Grade</th><th className="py-3 pr-4">Action</th></tr>
             </thead>
             <tbody>
@@ -235,7 +235,7 @@ const AdminReportsAudit = () => {
                   <td className="py-4 pr-4">{evaluation.lecturerName}</td>
                   <td className="py-4 pr-4 capitalize">{evaluation.type}</td>
                   <td className="py-4 pr-4 font-semibold">{Number(evaluation.overallGrade || 0).toFixed(1)}</td>
-                  <td className="py-4 pr-4"><button onClick={() => openEvaluationDetail(evaluation)} className="rounded-full border border-brandBlue px-4 py-2 text-xs font-semibold text-brandBlue">View Detail</button></td>
+                  <td className="py-4 pr-4 whitespace-nowrap"><button onClick={() => openEvaluationDetail(evaluation)} className="rounded-full border border-brandBlue px-4 py-2 text-xs font-semibold text-brandBlue">View Detail</button></td>
                 </tr>
               ))}
               {evaluations.length === 0 && (
@@ -248,15 +248,15 @@ const AdminReportsAudit = () => {
 
       <div className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
         <h3 className="text-xl font-bold text-brandBlue">Supervision Report Inbox</h3>
-        <div className="mt-5 overflow-x-auto">
-          <table className="min-w-full text-left text-sm">
-            <thead className="text-slate-500"><tr><th className="py-3 pr-4">Lecturer</th><th className="py-3 pr-4">Department</th><th className="py-3 pr-4">Report Title</th><th className="py-3 pr-4">Submitted</th><th className="py-3 pr-4">Status</th><th className="py-3 pr-4">Action</th></tr></thead>
+        <div className="mt-5 max-h-[28rem] overflow-y-auto overflow-x-hidden">
+          <table className="w-full table-fixed text-left text-sm [&_td]:break-words [&_th]:break-words">
+            <thead className="sticky top-0 z-10 bg-white text-slate-500"><tr><th className="py-3 pr-4">Lecturer</th><th className="py-3 pr-4">Department</th><th className="py-3 pr-4">Report Title</th><th className="py-3 pr-4">Submitted</th><th className="py-3 pr-4">Status</th><th className="py-3 pr-4">Action</th></tr></thead>
             <tbody>
               {reports.map((report) => (
                 <tr key={report.id} className="border-t border-slate-100">
                   <td className="py-4 pr-4">{report.lecturer_name}</td><td className="py-4 pr-4">{report.department_name}</td><td className="py-4 pr-4 font-semibold">{report.title}</td><td className="py-4 pr-4">{new Date(report.submitted_at).toLocaleDateString()}</td>
                   <td className="py-4 pr-4"><select value={report.status} onChange={(e) => updateReportStatus(report, e.target.value)} className="rounded-xl border border-slate-300 px-3 py-2"><option value="submitted">submitted</option><option value="under_review">under_review</option><option value="accepted">accepted</option><option value="rejected">rejected</option></select></td>
-                  <td className="py-4 pr-4"><button onClick={() => downloadReport(report)} className="rounded-full border border-brandBlue px-4 py-2 text-xs font-semibold text-brandBlue">View/Download</button></td>
+                  <td className="py-4 pr-4 whitespace-nowrap"><button onClick={() => downloadReport(report)} className="rounded-full border border-brandBlue px-4 py-2 text-xs font-semibold text-brandBlue">View/Download</button></td>
                 </tr>
               ))}
             </tbody>
@@ -274,9 +274,9 @@ const AdminReportsAudit = () => {
             <button onClick={loadLogs} className="rounded-2xl bg-brandGold px-5 py-3 font-semibold text-white">Search</button>
           </div>
         </div>
-        <div className="mt-5 overflow-x-auto">
-          <table className="min-w-full text-left text-sm">
-            <thead className="text-slate-500">
+        <div className="mt-5 max-h-[34rem] overflow-y-auto overflow-x-hidden">
+          <table className="w-full table-fixed text-left text-sm [&_td]:break-words [&_th]:break-words">
+            <thead className="sticky top-0 z-10 bg-white text-slate-500">
               <tr><th className="py-3 pr-4">Time</th><th className="py-3 pr-4">User</th><th className="py-3 pr-4">Action</th><th className="py-3 pr-4">Entity</th><th className="py-3 pr-4">Details</th><th className="py-3 pr-4">Action</th></tr>
             </thead>
             <tbody>
@@ -287,7 +287,7 @@ const AdminReportsAudit = () => {
                   <td className="py-4 pr-4 font-semibold">{formatAuditAction(log.action)}</td>
                   <td className="py-4 pr-4 text-slate-600">{log.entity_type}{log.entity_id ? ` #${log.entity_id}` : ""}</td>
                   <td className="py-4 pr-4 text-slate-600">{formatAuditDetails(log.details) || "-"}</td>
-                  <td className="py-4 pr-4">
+                  <td className="py-4 pr-4 whitespace-nowrap">
                     <button onClick={() => deleteAuditLog(log)} className="rounded-full border border-red-200 px-4 py-2 text-xs font-semibold text-red-700">Delete</button>
                   </td>
                 </tr>
@@ -331,9 +331,9 @@ const AdminReportsAudit = () => {
               <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700">{selectedEvaluation.commentText || "No comment recorded."}</p>
             </div>
 
-            <div className="mt-5 overflow-x-auto">
-              <table className="min-w-full text-left text-sm">
-                <thead className="text-slate-500"><tr><th className="py-3 pr-4">Question</th><th className="py-3 pr-4">Score</th></tr></thead>
+            <div className="mt-5 max-h-80 overflow-y-auto overflow-x-hidden">
+              <table className="w-full table-fixed text-left text-sm [&_td]:break-words [&_th]:break-words">
+                <thead className="sticky top-0 z-10 bg-white text-slate-500"><tr><th className="py-3 pr-4">Question</th><th className="py-3 pr-4">Score</th></tr></thead>
                 <tbody>
                   {(selectedEvaluation.responses || []).map((response) => (
                     <tr key={response.questionId} className="border-t border-slate-100">

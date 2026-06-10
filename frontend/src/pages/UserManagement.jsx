@@ -245,9 +245,9 @@ const UserManagement = () => {
           </div>
           <span className="rounded-full bg-amber-50 px-4 py-2 text-sm font-bold text-amber-700">{resetRequests.length} pending</span>
         </div>
-        <div className="mt-5 overflow-x-auto">
-          <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
-            <thead>
+        <div className="mt-5 max-h-72 overflow-y-auto overflow-x-hidden">
+          <table className="w-full table-fixed divide-y divide-slate-200 text-left text-sm [&_td]:break-words [&_th]:break-words">
+            <thead className="sticky top-0 z-10 bg-white">
               <tr className="text-slate-500">
                 <th className="py-3 pr-4 font-semibold">Request ID</th>
                 <th className="py-3 pr-4 font-semibold">University ID</th>
@@ -269,8 +269,8 @@ const UserManagement = () => {
                   <td className="py-4 pr-4 text-slate-600">{request.email}</td>
                   <td className="py-4 pr-4 capitalize text-slate-600">{request.role}</td>
                   <td className="py-4 pr-4 text-slate-600">{new Date(request.requestedAt).toLocaleString()}</td>
-                  <td className="py-4 pr-4">
-                    <div className="flex flex-wrap gap-2">
+                  <td className="py-4 pr-4 whitespace-nowrap">
+                    <div className="inline-flex flex-nowrap gap-2">
                       <button onClick={() => approveResetRequest(request)} className="rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white">Approve</button>
                       <button onClick={() => rejectResetRequest(request)} className="rounded-full bg-red-600 px-4 py-2 text-xs font-semibold text-white">Reject</button>
                     </div>
@@ -376,9 +376,9 @@ const UserManagement = () => {
         </select>
       </div>
       <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-slate-200 text-left text-sm">
-            <thead>
+        <div className="max-h-[36rem] overflow-y-auto overflow-x-hidden">
+          <table className="w-full table-fixed divide-y divide-slate-200 text-left text-sm [&_td]:break-words [&_th]:break-words">
+            <thead className="sticky top-0 z-10 bg-white">
               <tr className="text-slate-500">
                 <th className="py-3 pr-4 font-semibold">Name</th>
                 <th className="py-3 pr-4 font-semibold">University ID</th>
@@ -412,8 +412,8 @@ const UserManagement = () => {
                     </span>
                   </td>
                   <td className="py-4 pr-4 text-slate-600">{new Date(user.created_at).toLocaleDateString()}</td>
-                  <td className="py-4 pr-4">
-                    <div className="inline-flex overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                  <td className="py-4 pr-4 whitespace-nowrap">
+                    <div className="inline-flex flex-nowrap overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                       <button onClick={() => editUser(user)} className="px-3 py-2 text-xs font-semibold text-brandBlue hover:bg-blue-50">Edit</button>
                       {user.status === "approved" ? (
                         <button onClick={() => deactivateUser(user)} className="border-l border-slate-200 px-3 py-2 text-xs font-semibold text-amber-700 hover:bg-amber-50">Deactivate</button>

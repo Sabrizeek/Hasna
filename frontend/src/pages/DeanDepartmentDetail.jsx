@@ -141,16 +141,16 @@ const DeanDepartmentDetail = () => {
         </div>
 
         <div className="mt-8 overflow-hidden rounded-3xl border border-slate-200">
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-left text-sm">
-              <thead className="bg-slate-900 text-white">
+          <div className="max-h-[32rem] overflow-y-auto overflow-x-hidden">
+            <table className="w-full table-fixed text-left text-sm [&_td]:break-words [&_th]:break-words">
+              <thead className="sticky top-0 z-10 bg-slate-900 text-white">
                 <tr>
                   <th className="px-5 py-4 font-semibold">Lecturer Name</th>
                   <th className="px-5 py-4 font-semibold">Department</th>
                   <th className="px-5 py-4 font-semibold">Theory Score</th>
                   <th className="px-5 py-4 font-semibold">Practical Score</th>
                   <th className="px-5 py-4 font-semibold">Overall Score</th>
-                  <th className="px-5 py-4 font-semibold">Action</th>
+                  <th className="w-32 px-5 py-4 font-semibold">Action</th>
                 </tr>
               </thead>
               <tbody>
@@ -161,10 +161,10 @@ const DeanDepartmentDetail = () => {
                     <td className="px-5 py-4 text-slate-600">{lecturer.theoryScore}</td>
                     <td className="px-5 py-4 text-slate-600">{lecturer.practicalScore}</td>
                     <td className="px-5 py-4 font-bold text-orange-700">{lecturer.overallScore}</td>
-                    <td className="px-5 py-4">
+                    <td className="w-32 px-5 py-4 whitespace-nowrap">
                       <Link
                         to={`/dean/lecturers/${lecturer.lecturerId}?semesterId=${filters.semesterId}&academicYear=${encodeURIComponent(filters.academicYear)}`}
-                        className="rounded-full border border-orange-200 px-4 py-2 text-xs font-semibold text-orange-700 hover:bg-orange-50"
+                        className="inline-flex min-w-[5rem] justify-center whitespace-nowrap rounded-full border border-orange-200 px-4 py-2 text-xs font-semibold text-orange-700 hover:bg-orange-50"
                       >
                         View
                       </Link>

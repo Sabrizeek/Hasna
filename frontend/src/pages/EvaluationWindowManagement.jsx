@@ -172,7 +172,7 @@ const EvaluationWindowManagement = () => {
 
         <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
           <h3 className="text-xl font-bold text-brandBlue">Evaluation Windows</h3>
-          <div className="mt-5 space-y-3">
+          <div className="mt-5 max-h-[34rem] space-y-3 overflow-y-auto pr-2">
             {windows.map((window) => {
               const isClosed = window.status === "closed";
               return (

@@ -63,6 +63,9 @@ const LecturerEvaluationResults = () => {
   const [results, setResults] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [summaryError, setSummaryError] = useState("");
+  const [summaryResult, setSummaryResult] = useState(null);
 
   const filters = useMemo(() => {
     return {
@@ -114,6 +117,28 @@ const LecturerEvaluationResults = () => {
     const nextParams = new URLSearchParams(searchParams);
     nextParams.set("type", type);
     setSearchParams(nextParams);
+    setSummaryResult(null);
+    setSummaryError("");
+  };
+
+  const summarizeComments = async () => {
+    setSummaryLoading(true);
+    setSummaryError("");
+    setSummaryResult(null);
+
+    try {
+      const response = await api.post("/lecturer/comments/summarize", {
+        courseId: Number(courseId),
+        semesterId: Number(filters.semesterId),
+        academicYear: filters.academicYear,
+        type: filters.type,
+      });
+      setSummaryResult(response.data);
+    } catch (summaryRequestError) {
+      setSummaryError(summaryRequestError.response?.data?.message || "Unable to summarize comments right now. Please try again later.");
+    } finally {
+      setSummaryLoading(false);
+    }
   };
 
   return (
@@ -174,19 +199,21 @@ const LecturerEvaluationResults = () => {
               </div>
             ) : (
               <>
-                <div className="mt-8 grid gap-5 xl:grid-cols-2">
-                  {results.questions.map((question) => (
-                    <article key={question.questionId} className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
-                      <p className="text-sm font-bold text-sky-700">{question.label}</p>
-                      <h3 className="mt-2 min-h-16 text-sm font-semibold leading-7 text-slate-900">{question.questionText}</h3>
-                      <div className="mt-5 grid gap-5 sm:grid-cols-[180px_1fr] sm:items-center">
-                        <div className="h-44">
-                          <Pie data={buildChartData(question.distribution)} options={chartOptions} />
+                <div className="mt-8 max-h-[44rem] overflow-y-auto pr-2">
+                  <div className="grid gap-5 xl:grid-cols-2">
+                    {results.questions.map((question) => (
+                      <article key={question.questionId} className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                        <p className="text-sm font-bold text-sky-700">{question.label}</p>
+                        <h3 className="mt-2 min-h-16 text-sm font-semibold leading-7 text-slate-900">{question.questionText}</h3>
+                        <div className="mt-5 grid gap-5 sm:grid-cols-[180px_1fr] sm:items-center">
+                          <div className="h-44">
+                            <Pie data={buildChartData(question.distribution)} options={chartOptions} />
+                          </div>
+                          <DistributionLegend distribution={question.distribution} percentages={question.percentages} />
                         </div>
-                        <DistributionLegend distribution={question.distribution} percentages={question.percentages} />
-                      </div>
-                    </article>
-                  ))}
+                      </article>
+                    ))}
+                  </div>
                 </div>
 
                 <div className="mt-8 rounded-3xl border border-slate-200 bg-slate-50 p-5">
@@ -197,6 +224,75 @@ const LecturerEvaluationResults = () => {
                     </div>
                     <DistributionLegend distribution={results.overallGradeDistribution} percentages={overallPercentages} />
                   </div>
+                </div>
+
+                <div className="mt-8 rounded-3xl border border-violet-100 bg-violet-50 p-5">
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                    <div>
+                      <p className="text-sm font-semibold uppercase tracking-[0.24em] text-violet-700">Student Comments Summary</p>
+                      <h3 className="mt-2 text-xl font-bold text-slate-950">AI-Assisted Feedback Summary</h3>
+                      <p className="mt-2 text-sm leading-6 text-slate-600">
+                        Summarizes anonymous student comments for this module and evaluation type.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={summarizeComments}
+                      disabled={summaryLoading}
+                      className="rounded-2xl bg-violet-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-violet-800 disabled:cursor-wait disabled:bg-violet-300"
+                    >
+                      {summaryLoading ? "Summarizing comments..." : "Summarize Comments"}
+                    </button>
+                  </div>
+
+                  {summaryError && (
+                    <div className="mt-5 rounded-2xl border border-red-100 bg-red-50 p-4 text-sm font-semibold text-red-700">
+                      {summaryError}
+                    </div>
+                  )}
+
+                  {summaryResult && (
+                    <div className="mt-5 rounded-3xl border border-violet-100 bg-white p-5 shadow-sm">
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        <p className="text-sm font-bold text-violet-700">
+                          {summaryResult.totalComments || 0} comments summarized
+                        </p>
+                        {summaryResult.generatedAt && (
+                          <p className="text-xs font-semibold text-slate-400">
+                            Generated {new Date(summaryResult.generatedAt).toLocaleString()}
+                          </p>
+                        )}
+                      </div>
+                      <p className="mt-4 whitespace-pre-wrap text-sm leading-7 text-slate-700">{summaryResult.summary}</p>
+                      <p className="mt-3 rounded-2xl bg-violet-50 px-4 py-3 text-xs font-semibold leading-5 text-violet-700">
+                        AI summary is generated from anonymous student comments only. Please review original anonymous comments for full context.
+                      </p>
+
+                      <div className="mt-5 grid gap-4 lg:grid-cols-3">
+                        <div className="rounded-2xl bg-emerald-50 p-4">
+                          <h4 className="font-bold text-emerald-700">Key Strengths</h4>
+                          <ul className="mt-3 space-y-2 text-sm text-slate-700">
+                            {(summaryResult.keyStrengths || []).map((item, index) => <li key={index}>{item}</li>)}
+                            {(summaryResult.keyStrengths || []).length === 0 && <li>No key strengths detected yet.</li>}
+                          </ul>
+                        </div>
+                        <div className="rounded-2xl bg-amber-50 p-4">
+                          <h4 className="font-bold text-amber-700">Improvement Areas</h4>
+                          <ul className="mt-3 space-y-2 text-sm text-slate-700">
+                            {(summaryResult.improvementAreas || []).map((item, index) => <li key={index}>{item}</li>)}
+                            {(summaryResult.improvementAreas || []).length === 0 && <li>No recurring improvement area detected yet.</li>}
+                          </ul>
+                        </div>
+                        <div className="rounded-2xl bg-sky-50 p-4">
+                          <h4 className="font-bold text-sky-700">Common Themes</h4>
+                          <ul className="mt-3 space-y-2 text-sm text-slate-700">
+                            {(summaryResult.commonThemes || []).map((item, index) => <li key={index}>{item}</li>)}
+                            {(summaryResult.commonThemes || []).length === 0 && <li>No common themes detected yet.</li>}
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="mt-8 rounded-3xl border border-slate-200 bg-white p-5">
@@ -215,7 +311,7 @@ const LecturerEvaluationResults = () => {
                       No written comments have been submitted for this module and evaluation type yet.
                     </div>
                   ) : (
-                    <div className="mt-5 grid gap-3">
+                    <div className="mt-5 max-h-96 space-y-3 overflow-y-auto pr-2">
                       {results.comments.map((comment, index) => (
                         <article key={`${comment.submittedAt}-${index}`} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                           <p className="whitespace-pre-wrap text-sm leading-6 text-slate-700">{comment.commentText}</p>
