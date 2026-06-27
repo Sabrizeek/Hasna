@@ -35,7 +35,7 @@ const sendMailSafely = async ({ to, subject, text }) => {
   }
 };
 
-export const sendAccountCreatedEmail = async ({ to, name, universityId, email, defaultPassword }) => {
+export const sendAccountCreatedEmail = async ({ to, name, universityId, email, temporaryPassword }) => {
   const subject = "Lecturer Evaluation System Account Created";
   const text = `Dear ${name},
 
@@ -43,7 +43,7 @@ Your Lecturer Evaluation System account has been created.
 
 University ID: ${universityId}
 Email: ${email}
-Default Password: ${defaultPassword}
+Temporary Password: ${temporaryPassword}
 
 Please log in and change your password immediately.
 
@@ -53,14 +53,14 @@ University of Ruhuna`;
   return sendMailSafely({ to, subject, text });
 };
 
-export const sendPasswordResetEmail = async ({ to, name, universityId, defaultPassword }) => {
+export const sendPasswordResetEmail = async ({ to, name, universityId, temporaryPassword }) => {
   const subject = "Lecturer Evaluation System Password Reset";
   const text = `Dear ${name},
 
-Your password has been reset to the default password.
+Your password has been reset.
 
 University ID: ${universityId}
-Default Password: ${defaultPassword}
+Temporary Password: ${temporaryPassword}
 
 Please log in and change your password immediately.
 
@@ -70,14 +70,14 @@ University of Ruhuna`;
   return sendMailSafely({ to, subject, text });
 };
 
-export const sendPasswordResetApprovedEmail = async ({ to, name, universityId, defaultPassword }) => {
+export const sendPasswordResetApprovedEmail = async ({ to, name, universityId, temporaryPassword }) => {
   const subject = "Lecturer Evaluation System Password Reset Approved";
   const text = `Dear ${name},
 
 Your password reset request has been approved.
 
 University ID: ${universityId}
-Default Password: ${defaultPassword}
+Temporary Password: ${temporaryPassword}
 
 Please log in and change your password immediately.
 

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import Navbar from "../components/Navbar.jsx";
+import SiteFooter from "../components/SiteFooter.jsx";
 import api from "../api/axios.js";
 
 const ForgotPassword = () => {
@@ -72,6 +73,7 @@ const ForgotPassword = () => {
           <Link to="/login" className="mt-5 inline-flex text-sm font-semibold text-brandBlue">Back to Login</Link>
         </section>
       </main>
+      <SiteFooter compact />
     </div>
   );
 };

@@ -2,6 +2,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import NotificationBell from "./NotificationBell.jsx";
 import ProfileAvatarButton from "./ProfileAvatarButton.jsx";
+import SiteFooter from "./SiteFooter.jsx";
 
 const navItems = [
   { key: "dashboard", label: "Dashboard", to: "/lecturer/dashboard" },
@@ -55,9 +56,9 @@ const LecturerLayout = ({ children }) => {
         </div>
       </header>
 
-      <div className="w-full min-w-0 px-4 pb-8 pt-28 sm:px-6 lg:px-10 lg:pl-[350px]">
-        <aside className="mb-6 h-fit rounded-3xl border border-sky-100 bg-white p-4 shadow-sm lg:fixed lg:left-8 lg:top-28 lg:z-20 lg:mb-0 lg:w-[290px]">
-          <div className="mb-4 rounded-2xl bg-sky-700 p-4 text-white">
+      <div className="w-full min-w-0 px-4 pb-8 pt-28 sm:px-6 lg:px-10 lg:pl-[310px]">
+        <aside className="mb-6 rounded-3xl border border-sky-100 bg-white p-3 shadow-sm lg:fixed lg:left-8 lg:top-28 lg:z-20 lg:mb-0 lg:w-[250px]">
+          <div className="mb-3 rounded-2xl bg-sky-700 p-4 text-white">
             <p className="text-xs font-bold uppercase tracking-[0.25em] text-sky-100">Lecturer</p>
             <p className="mt-2 text-sm font-semibold">{user?.full_name}</p>
             <p className="mt-1 text-xs text-sky-100">{user?.department_name || "Faculty of Science"}</p>
@@ -80,6 +81,9 @@ const LecturerLayout = ({ children }) => {
           </nav>
         </aside>
         <main className="min-w-0 overflow-x-hidden">{children}</main>
+      </div>
+      <div className="lg:pl-[310px]">
+        <SiteFooter compact />
       </div>
     </div>
   );

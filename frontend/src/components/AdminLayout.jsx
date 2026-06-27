@@ -2,6 +2,7 @@ import Sidebar from "./Sidebar.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import NotificationBell from "./NotificationBell.jsx";
 import ProfileAvatarButton from "./ProfileAvatarButton.jsx";
+import SiteFooter from "./SiteFooter.jsx";
 
 const AdminLayout = ({ title, children }) => {
   const { user, logout } = useAuth();
@@ -27,6 +28,7 @@ const AdminLayout = ({ title, children }) => {
           </div>
         </div>
         <div className="min-w-0 overflow-x-hidden p-4 pt-28 sm:p-6 sm:pt-28 lg:p-8 lg:pt-28">{children}</div>
+        <SiteFooter compact />
       </main>
     </div>
   );

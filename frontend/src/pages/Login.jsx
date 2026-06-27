@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import Navbar from "../components/Navbar.jsx";
 import PasswordInput from "../components/PasswordInput.jsx";
+import SiteFooter from "../components/SiteFooter.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 
 const homeByRole = {
@@ -94,6 +95,7 @@ const Login = () => {
           </form>
         </div>
       </div>
+      <SiteFooter compact />
     </div>
   );
 };

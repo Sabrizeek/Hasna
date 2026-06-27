@@ -60,6 +60,8 @@ JWT_EXPIRES_IN=7d
 DEFAULT_USER_PASSWORD=UOR@12345
 ```
 
+`DEFAULT_USER_PASSWORD` is used for seeded demo users during initialization. Admin-created users and admin-approved resets use a generated temporary password.
+
 SMTP/email settings are optional for development. If SMTP is missing or fails, the backend returns/logs a safe email preview.
 
 ```env
@@ -172,6 +174,7 @@ Student: SCI2026001 / UOR@12345
 Staff can log in with University ID or email. Students log in with University ID.
 
 ## Password Flow
+- Admin-created users receive a generated temporary password by email and are forced to change it on first login.
 - All seeded/demo non-admin users are forced to change the default password on first login.
 - Users can update their password from Profile Settings.
 - Current password is required.
@@ -184,7 +187,7 @@ Staff can log in with University ID or email. Students log in with University ID
 3. The frontend always shows a generic message.
 4. If the details match an active account, a pending request is created.
 5. Admin reviews the request in User Management.
-6. Approval resets the user password to `DEFAULT_USER_PASSWORD`, emails/notifies the user, and forces password change on next login.
+6. Approval generates a temporary password, emails/notifies the user, and forces password change on next login.
 7. Rejection emails/notifies the user.
 
 ## Notifications
@@ -207,7 +210,7 @@ Users can see only their own notification rows.
 ## Role Testing Guide
 Student:
 - Log in with University ID.
-- Change default password if prompted.
+- Change temporary/default initial password if prompted.
 - Update profile/photo/phone/password.
 - Select department, academic year, semester, and course.
 - Select lecturer and view profile.

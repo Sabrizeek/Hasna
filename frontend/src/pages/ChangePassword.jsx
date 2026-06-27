@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar.jsx";
 import PasswordInput from "../components/PasswordInput.jsx";
+import SiteFooter from "../components/SiteFooter.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 
 const homeByRole = {
@@ -55,7 +56,7 @@ const ChangePassword = () => {
           <p className="text-xs font-semibold uppercase tracking-[0.35em] text-brandGold">First Login</p>
           <h1 className="mt-3 text-3xl font-bold text-brandBlue">Change Password</h1>
           <p className="mt-3 text-sm leading-7 text-slate-600">
-            For security, please change your default password before continuing.
+            For security, please change your temporary password before continuing.
           </p>
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-5">
@@ -78,6 +79,7 @@ const ChangePassword = () => {
           </form>
         </section>
       </main>
+      <SiteFooter compact />
     </div>
   );
 };

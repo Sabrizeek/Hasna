@@ -23,7 +23,33 @@ const parseScore = (value) => {
   return Number.isFinite(parsed) && parsed >= 0 && parsed <= 100 ? parsed : null;
 };
 
-const defaultUserPassword = () => process.env.DEFAULT_USER_PASSWORD || "UOR@12345";
+const generateTemporaryPassword = (length = 14) => {
+  const uppercase = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+  const lowercase = "abcdefghijkmnopqrstuvwxyz";
+  const digits = "23456789";
+  const symbols = "!@#$%^&*()-_=+";
+  const allChars = `${uppercase}${lowercase}${digits}${symbols}`;
+
+  const pick = (chars) => chars[crypto.randomInt(0, chars.length)];
+
+  const passwordChars = [
+    pick(uppercase),
+    pick(lowercase),
+    pick(digits),
+    pick(symbols),
+  ];
+
+  for (let index = passwordChars.length; index < length; index += 1) {
+    passwordChars.push(pick(allChars));
+  }
+
+  for (let index = passwordChars.length - 1; index > 0; index -= 1) {
+    const swapIndex = crypto.randomInt(0, index + 1);
+    [passwordChars[index], passwordChars[swapIndex]] = [passwordChars[swapIndex], passwordChars[index]];
+  }
+
+  return passwordChars.join("");
+};
 
 const escapeCsv = (value) => `"${String(value ?? "").replace(/"/g, '""')}"`;
 
@@ -151,8 +177,8 @@ export const createUser = async (req, res) => {
     if (!allowedRoles.includes(role)) return res.status(400).json({ message: "Invalid user role." });
     if (role !== "admin" && !resolvedDepartmentId) return res.status(400).json({ message: "Department is required for this role." });
 
-    const defaultPassword = defaultUserPassword();
-    const hashedPassword = await bcrypt.hash(defaultPassword, 10);
+    const temporaryPassword = generateTemporaryPassword();
+    const hashedPassword = await bcrypt.hash(temporaryPassword, 10);
 
     const [activeConflicts] = await query(
       `SELECT id FROM users
@@ -209,13 +235,13 @@ export const createUser = async (req, res) => {
       name: normalizedFullName,
       universityId: normalizedUniversityId,
       email: normalizedEmail,
-      defaultPassword,
+      temporaryPassword,
     });
 
     await notifyUser({
       userId,
       title: "LES Account Created",
-      message: "Your LES account has been created. Please log in with your University ID and default password.",
+      message: "Your LES account has been created. Please check your email for the temporary password and change it after logging in.",
       type: "success",
       relatedEntityType: "user",
       relatedEntityId: userId,
@@ -315,19 +341,19 @@ export const resetUserPassword = async (req, res) => {
     const [users] = await query("SELECT id, university_id, full_name, email FROM users WHERE id = ? AND deleted_at IS NULL LIMIT 1", [id]);
     if (users.length === 0) return res.status(404).json({ message: "User not found." });
 
-    const defaultPassword = defaultUserPassword();
-    const hashedPassword = await bcrypt.hash(defaultPassword, 10);
+    const temporaryPassword = generateTemporaryPassword();
+    const hashedPassword = await bcrypt.hash(temporaryPassword, 10);
     await query("UPDATE users SET password = ?, first_login = 1, must_change_password = 1 WHERE id = ?", [hashedPassword, id]);
 
     const emailStatus = await sendPasswordResetEmail({
       to: users[0].email,
       name: users[0].full_name,
       universityId: users[0].university_id,
-      defaultPassword,
+      temporaryPassword,
     });
 
     await logAudit({ userId: req.user.id, action: "user_password_reset", entityType: "user", entityId: id });
-    res.json({ message: "Password reset to the default password and notification sent.", emailStatus });
+    res.json({ message: "Password reset successfully. A temporary password was generated and sent by email.", emailStatus });
   } catch (error) {
     res.status(500).json({ message: "Failed to reset password.", error: error.message });
   }
@@ -379,8 +405,8 @@ export const approvePasswordResetRequest = async (req, res) => {
     if (requests[0].status !== "pending") return res.status(409).json({ message: "This request has already been reviewed." });
 
     const request = requests[0];
-    const defaultPassword = defaultUserPassword();
-    const hashedPassword = await bcrypt.hash(defaultPassword, 10);
+    const temporaryPassword = generateTemporaryPassword();
+    const hashedPassword = await bcrypt.hash(temporaryPassword, 10);
 
     await query(
       "UPDATE users SET password = ?, first_login = 1, must_change_password = 1 WHERE id = ?",
@@ -395,13 +421,13 @@ export const approvePasswordResetRequest = async (req, res) => {
       to: request.email,
       name: request.full_name,
       universityId: request.university_id,
-      defaultPassword,
+      temporaryPassword,
     });
 
     await notifyUser({
       userId: request.userId,
       title: "Password Reset Approved",
-      message: "Your password was reset to the default password. Please log in and change it immediately.",
+      message: "Your password reset request was approved. Please check your email for the temporary password and change it immediately.",
       type: "success",
       relatedEntityType: "password_reset_request",
       relatedEntityId: id,

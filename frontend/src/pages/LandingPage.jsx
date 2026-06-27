@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import Navbar from "../components/Navbar.jsx";
+import SiteFooter from "../components/SiteFooter.jsx";
 import api from "../api/axios.js";
 
 const LandingPage = () => {
@@ -54,10 +55,10 @@ const LandingPage = () => {
               <div className="text-sm font-semibold uppercase tracking-[0.3em] text-brandGold">System Flow</div>
               <ol className="mt-4 space-y-3 text-sm leading-6 text-slate-700">
                 <li>1. Admin creates student and staff accounts.</li>
-                <li>2. Users receive a University ID and default password.</li>
+                <li>2. Users receive a University ID and a temporary password by email.</li>
                 <li>3. Students log in with University ID.</li>
                 <li>4. Staff log in with University ID or email.</li>
-                <li>5. Users change the default password on first login.</li>
+                <li>5. Users change the temporary password on first login.</li>
               </ol>
             </div>
           </div>
@@ -89,6 +90,7 @@ const LandingPage = () => {
           )}
         </div>
       </section>
+      <SiteFooter />
     </div>
   );
 };

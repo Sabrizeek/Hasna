@@ -2,6 +2,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 import NotificationBell from "./NotificationBell.jsx";
 import ProfileAvatarButton from "./ProfileAvatarButton.jsx";
+import SiteFooter from "./SiteFooter.jsx";
 
 const StudentLayout = ({ children }) => {
   const { user, logout } = useAuth();
@@ -60,6 +61,9 @@ const StudentLayout = ({ children }) => {
           </nav>
         </aside>
         <main className="min-w-0 overflow-x-hidden">{children}</main>
+      </div>
+      <div className="lg:pl-[310px]">
+        <SiteFooter compact />
       </div>
     </div>
   );
