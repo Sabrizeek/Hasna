@@ -4,7 +4,7 @@ import crypto from "crypto";
 import fs from "fs";
 import path from "path";
 import { logAudit } from "../utils/auditLogger.js";
-import { supervisionReportsUploadDir } from "../utils/uploadDirectories.js";
+import { peerEvaluationsUploadDir, supervisionReportsUploadDir } from "../utils/uploadDirectories.js";
 import {
   sendAccountCreatedEmail,
   sendPasswordResetApprovedEmail,
@@ -1325,5 +1325,274 @@ export const deleteAuditLog = async (req, res) => {
     res.json({ message: "Audit log deleted successfully." });
   } catch (error) {
     res.status(500).json({ message: "Failed to delete audit log.", error: error.message });
+  }
+};
+
+export const getAdminPeerEvaluations = async (req, res) => {
+  try {
+    const [uploads] = await query(
+      `SELECT p.id, p.file_name, p.file_path, p.file_type, p.file_size, p.status, p.submitted_at,
+              u1.full_name AS evaluator_name, u2.full_name AS evaluated_name,
+              s.semester_name, a.academic_year
+       FROM peer_evaluation_uploads p
+       INNER JOIN peer_evaluation_assignments a ON p.assignment_id = a.id
+       INNER JOIN users u1 ON p.evaluator_id = u1.id
+       INNER JOIN users u2 ON p.evaluated_id = u2.id
+       INNER JOIN semesters s ON a.semester_id = s.id
+       ORDER BY p.submitted_at DESC`
+    );
+
+    res.json({ uploads });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to fetch peer evaluations.", error: error.message });
+  }
+};
+
+export const updatePeerEvaluationStatus = async (req, res) => {
+  try {
+    const uploadId = parsePositiveInt(req.params.id);
+    const { status } = req.body;
+
+    if (!uploadId) {
+      return res.status(400).json({ message: "Valid upload ID is required." });
+    }
+
+    if (!["submitted", "under_review", "accepted", "rejected"].includes(status)) {
+      return res.status(400).json({ message: "Invalid status." });
+    }
+
+    const [uploads] = await query("SELECT evaluator_id, status FROM peer_evaluation_uploads WHERE id = ?", [uploadId]);
+
+    if (uploads.length === 0) {
+      return res.status(404).json({ message: "Peer evaluation not found." });
+    }
+
+    const previousStatus = uploads[0].status;
+
+    await query(
+      `UPDATE peer_evaluation_uploads
+       SET status = ?
+       WHERE id = ?`,
+      [status, uploadId]
+    );
+
+    await notifyUser({
+      userId: uploads[0].evaluator_id,
+      title: "Peer Evaluation Status Updated",
+      message: `Your peer evaluation upload status has been changed to '${status}'.`,
+      type: status === "accepted" ? "success" : "info",
+      relatedEntityType: "peer_evaluation_upload",
+      relatedEntityId: uploadId,
+    });
+
+    logAudit(req.user.id, "update_peer_evaluation_status", "peer_evaluation_upload", uploadId, {
+      previousStatus,
+      newStatus: status,
+    });
+
+    res.json({ message: "Status updated successfully." });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to update peer evaluation status.", error: error.message });
+  }
+};
+
+export const downloadAdminPeerEvaluation = async (req, res) => {
+  try {
+    const uploadId = parsePositiveInt(req.params.id);
+
+    if (!uploadId) {
+      return res.status(400).json({ message: "Valid upload ID is required." });
+    }
+
+    const [uploads] = await query("SELECT file_name, file_path FROM peer_evaluation_uploads WHERE id = ? LIMIT 1", [uploadId]);
+
+    if (uploads.length === 0) {
+      return res.status(404).json({ message: "Upload not found." });
+    }
+
+    const storedName = path.basename(uploads[0].file_path);
+    const absolutePath = path.join(peerEvaluationsUploadDir, storedName);
+
+    if (!fs.existsSync(absolutePath)) {
+      return res.status(404).json({ message: "File not found." });
+    }
+
+    res.download(absolutePath, uploads[0].file_name);
+  } catch (error) {
+    res.status(500).json({ message: "Failed to download peer evaluation.", error: error.message });
+  }
+};
+
+export const createPeerEvaluationAssignment = async (req, res) => {
+  try {
+    const { evaluatedId, evaluator1Id, evaluator2Id, semesterId } = req.body;
+
+    if (!evaluatedId || !evaluator1Id || !evaluator2Id || !semesterId) {
+      return res.status(400).json({ message: "All fields are required." });
+    }
+
+    if (String(evaluatedId) === String(evaluator1Id) || String(evaluatedId) === String(evaluator2Id) || String(evaluator1Id) === String(evaluator2Id)) {
+      return res.status(400).json({ message: "Lecturers cannot evaluate themselves, and evaluators must be distinct." });
+    }
+
+    const [existing] = await query("SELECT id FROM peer_evaluation_assignments WHERE evaluated_id = ? AND semester_id = ?", [evaluatedId, semesterId]);
+    if (existing.length > 0) {
+      return res.status(400).json({ message: "Evaluators have already been assigned for this lecturer and semester. Please use the Edit action." });
+    }
+
+    const [semesters] = await query("SELECT academic_year FROM semesters WHERE id = ?", [semesterId]);
+    if (semesters.length === 0) {
+      return res.status(400).json({ message: "Invalid semester." });
+    }
+
+    const academicYear = semesters[0].academic_year;
+
+    await query(
+      `INSERT INTO peer_evaluation_assignments (evaluator_id, evaluated_id, semester_id, academic_year) VALUES (?, ?, ?, ?), (?, ?, ?, ?)`,
+      [evaluator1Id, evaluatedId, semesterId, academicYear, evaluator2Id, evaluatedId, semesterId, academicYear]
+    );
+
+    const [evaluatedUser] = await query("SELECT full_name FROM users WHERE id = ?", [evaluatedId]);
+    const targetName = evaluatedUser.length > 0 ? evaluatedUser[0].full_name : "a lecturer";
+
+    await notifyUser({
+      userId: evaluator1Id,
+      title: "New Peer Evaluation Assignment",
+      message: `You have been assigned to evaluate ${targetName} for the ${academicYear} academic year.`,
+      type: "info"
+    });
+
+    await notifyUser({
+      userId: evaluator2Id,
+      title: "New Peer Evaluation Assignment",
+      message: `You have been assigned to evaluate ${targetName} for the ${academicYear} academic year.`,
+      type: "info"
+    });
+
+    logAudit(req.user.id, "create_peer_evaluation_assignment", "peer_evaluation_assignments", evaluatedId, {
+      evaluator1Id,
+      evaluator2Id,
+      semesterId,
+    });
+
+    res.status(201).json({ message: "Peer evaluation assignments created successfully." });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to assign peer evaluators.", error: error.message });
+  }
+};
+
+export const getAdminPeerEvaluationAssignments = async (req, res) => {
+  try {
+    const [assignments] = await query(
+      `SELECT a.id, a.academic_year, a.status, a.created_at,
+              a.evaluator_id, a.evaluated_id, a.semester_id,
+              u1.full_name AS evaluator_name, u2.full_name AS evaluated_name,
+              s.semester_name
+       FROM peer_evaluation_assignments a
+       INNER JOIN users u1 ON a.evaluator_id = u1.id
+       INNER JOIN users u2 ON a.evaluated_id = u2.id
+       INNER JOIN semesters s ON a.semester_id = s.id
+       ORDER BY a.created_at DESC`
+    );
+    res.json({ assignments });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to fetch peer evaluation assignments.", error: error.message });
+  }
+};
+
+export const deletePeerEvaluationAssignment = async (req, res) => {
+  try {
+    const { evaluatedId, semesterId } = req.params;
+
+    const [existing] = await query("SELECT evaluator_id, status FROM peer_evaluation_assignments WHERE evaluated_id = ? AND semester_id = ?", [evaluatedId, semesterId]);
+    if (existing.some(e => e.status === 'completed')) {
+      return res.status(400).json({ message: "Cannot delete assignments that have already been completed." });
+    }
+
+    const [evaluatedUser] = await query("SELECT full_name FROM users WHERE id = ?", [evaluatedId]);
+    const targetName = evaluatedUser.length > 0 ? evaluatedUser[0].full_name : "a lecturer";
+    const [semesters] = await query("SELECT academic_year FROM semesters WHERE id = ?", [semesterId]);
+    const academicYear = semesters.length > 0 ? semesters[0].academic_year : "";
+
+    await query("DELETE FROM peer_evaluation_assignments WHERE evaluated_id = ? AND semester_id = ?", [evaluatedId, semesterId]);
+
+    for (const assignment of existing) {
+      await notifyUser({
+        userId: assignment.evaluator_id,
+        title: "Peer Evaluation Assignment Cancelled",
+        message: `Your assignment to evaluate ${targetName} for ${academicYear} has been cancelled.`,
+        type: "warning"
+      });
+    }
+
+    logAudit(req.user.id, "delete_peer_evaluation_assignment", "peer_evaluation_assignments", evaluatedId, { semesterId });
+
+    res.json({ message: "Assignments deleted successfully." });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to delete assignments.", error: error.message });
+  }
+};
+
+export const updatePeerEvaluationAssignment = async (req, res) => {
+  try {
+    const { evaluatedId, semesterId } = req.params;
+    const { evaluator1Id, evaluator2Id } = req.body;
+
+    if (!evaluator1Id || !evaluator2Id) {
+       return res.status(400).json({ message: "Both evaluators are required." });
+    }
+
+    if (String(evaluatedId) === String(evaluator1Id) || String(evaluatedId) === String(evaluator2Id) || String(evaluator1Id) === String(evaluator2Id)) {
+      return res.status(400).json({ message: "Lecturers cannot evaluate themselves, and evaluators must be distinct." });
+    }
+
+    const [existing] = await query("SELECT evaluator_id, status FROM peer_evaluation_assignments WHERE evaluated_id = ? AND semester_id = ?", [evaluatedId, semesterId]);
+    if (existing.some(e => e.status === 'completed')) {
+      return res.status(400).json({ message: "Cannot edit assignments that have already been completed." });
+    }
+
+    const [semesters] = await query("SELECT academic_year FROM semesters WHERE id = ?", [semesterId]);
+    if (semesters.length === 0) return res.status(400).json({ message: "Invalid semester." });
+    const academicYear = semesters[0].academic_year;
+
+    const [evaluatedUser] = await query("SELECT full_name FROM users WHERE id = ?", [evaluatedId]);
+    const targetName = evaluatedUser.length > 0 ? evaluatedUser[0].full_name : "a lecturer";
+
+    await query("DELETE FROM peer_evaluation_assignments WHERE evaluated_id = ? AND semester_id = ?", [evaluatedId, semesterId]);
+    await query(
+      `INSERT INTO peer_evaluation_assignments (evaluator_id, evaluated_id, semester_id, academic_year) VALUES (?, ?, ?, ?), (?, ?, ?, ?)`,
+      [evaluator1Id, evaluatedId, semesterId, academicYear, evaluator2Id, evaluatedId, semesterId, academicYear]
+    );
+
+    const oldEvaluators = existing.map(e => String(e.evaluator_id));
+    const newEvaluators = [String(evaluator1Id), String(evaluator2Id)];
+
+    for (const assignment of existing) {
+      if (!newEvaluators.includes(String(assignment.evaluator_id))) {
+        await notifyUser({
+          userId: assignment.evaluator_id,
+          title: "Peer Evaluation Assignment Removed",
+          message: `Your assignment to evaluate ${targetName} for ${academicYear} has been reassigned to someone else.`,
+          type: "warning"
+        });
+      }
+    }
+
+    for (const newEvalId of newEvaluators) {
+      if (!oldEvaluators.includes(newEvalId)) {
+        await notifyUser({
+          userId: newEvalId,
+          title: "New Peer Evaluation Assignment",
+          message: `You have been assigned to evaluate ${targetName} for the ${academicYear} academic year.`,
+          type: "info"
+        });
+      }
+    }
+
+    logAudit(req.user.id, "update_peer_evaluation_assignment", "peer_evaluation_assignments", evaluatedId, { evaluator1Id, evaluator2Id, semesterId });
+
+    res.json({ message: "Assignments updated successfully." });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to update assignments.", error: error.message });
   }
 };

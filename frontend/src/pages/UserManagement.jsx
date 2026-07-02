@@ -245,8 +245,8 @@ const UserManagement = () => {
           </div>
           <span className="rounded-full bg-amber-50 px-4 py-2 text-sm font-bold text-amber-700">{resetRequests.length} pending</span>
         </div>
-        <div className="mt-5 max-h-72 overflow-y-auto overflow-x-hidden">
-          <table className="w-full table-fixed divide-y divide-slate-200 text-left text-sm [&_td]:break-words [&_th]:break-words">
+        <div className="mt-5 max-h-72 overflow-y-auto overflow-x-auto">
+          <table className="w-full table-fixed divide-y divide-slate-200 text-left text-sm [&_td]:break-words [&_th]:break-words min-w-[800px]">
             <thead className="sticky top-0 z-10 bg-white">
               <tr className="text-slate-500">
                 <th className="py-3 pr-4 font-semibold">Request ID</th>
@@ -255,7 +255,7 @@ const UserManagement = () => {
                 <th className="py-3 pr-4 font-semibold">Email</th>
                 <th className="py-3 pr-4 font-semibold">Role</th>
                 <th className="py-3 pr-4 font-semibold">Requested</th>
-                <th className="py-3 pr-4 font-semibold">Actions</th>
+                <th className="w-44 py-3 pr-4 font-semibold">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -376,8 +376,8 @@ const UserManagement = () => {
         </select>
       </div>
       <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="max-h-[36rem] overflow-y-auto overflow-x-hidden">
-          <table className="w-full table-fixed divide-y divide-slate-200 text-left text-sm [&_td]:break-words [&_th]:break-words">
+        <div className="max-h-[36rem] overflow-y-auto overflow-x-auto">
+          <table className="w-full table-fixed divide-y divide-slate-200 text-left text-sm [&_td]:break-words [&_th]:break-words min-w-[1000px]">
             <thead className="sticky top-0 z-10 bg-white">
               <tr className="text-slate-500">
                 <th className="py-3 pr-4 font-semibold">Name</th>
@@ -388,7 +388,7 @@ const UserManagement = () => {
                 <th className="py-3 pr-4 font-semibold">Department</th>
                 <th className="py-3 pr-4 font-semibold">Status</th>
                 <th className="py-3 pr-4 font-semibold">Created</th>
-                <th className="py-3 pr-4 font-semibold">Action</th>
+                <th className="w-[280px] py-3 pr-4 font-semibold">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -401,7 +401,7 @@ const UserManagement = () => {
                   <td className="py-4 pr-4 capitalize text-slate-600">{user.role}</td>
                   <td className="py-4 pr-4 text-slate-600">{user.department_name}</td>
                   <td className="py-4 pr-4">
-                    <span className={`rounded-full px-3 py-1 text-xs font-bold capitalize ${
+                    <span className={`inline-block whitespace-nowrap rounded-full px-3 py-1 text-xs font-bold capitalize ${
                       user.status === "approved"
                         ? "bg-emerald-50 text-emerald-700"
                         : user.status === "pending"

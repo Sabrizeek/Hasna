@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { query } from "../config/db.js";
-import { supervisionReportsUploadDir } from "../utils/uploadDirectories.js";
+import { peerEvaluationsUploadDir, supervisionReportsUploadDir } from "../utils/uploadDirectories.js";
 import { notifyAdmins } from "../utils/notificationService.js";
 import { summarizeCommentTexts } from "../services/aiSummarizerService.js";
 
@@ -354,4 +354,126 @@ export const downloadSupervisionTemplate = async (req, res) => {
   res.setHeader("Content-Type", "application/msword");
   res.setHeader("Content-Disposition", "attachment; filename=\"supervision-report-template.doc\"");
   res.send(templateContent);
+};
+
+export const getPeerEvaluations = async (req, res) => {
+  try {
+    const [assignments] = await query(
+      `SELECT a.id AS assignment_id, a.academic_year, a.status AS assignment_status,
+              u.full_name AS evaluated_name, s.semester_name,
+              p.id AS upload_id, p.file_name, p.file_path, p.status AS upload_status, p.submitted_at
+       FROM peer_evaluation_assignments a
+       INNER JOIN users u ON a.evaluated_id = u.id
+       INNER JOIN semesters s ON a.semester_id = s.id
+       LEFT JOIN peer_evaluation_uploads p ON p.assignment_id = a.id
+       WHERE a.evaluator_id = ?
+       ORDER BY a.created_at DESC`,
+      [req.user.id]
+    );
+
+    res.json({ assignments });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to fetch peer evaluations.", error: error.message });
+  }
+};
+
+export const uploadPeerEvaluation = async (req, res) => {
+  try {
+    const assignmentId = parsePositiveInt(req.params.assignmentId);
+
+    if (!assignmentId) {
+      if (req.file?.path) fs.unlink(req.file.path, () => {});
+      return res.status(400).json({ message: "Valid assignment is required." });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({ message: "Please upload a valid document (PDF, JPG, PNG)." });
+    }
+
+    const [assignments] = await query(
+      `SELECT id, evaluated_id FROM peer_evaluation_assignments 
+       WHERE id = ? AND evaluator_id = ? LIMIT 1`,
+      [assignmentId, req.user.id]
+    );
+
+    if (assignments.length === 0) {
+      if (req.file?.path) fs.unlink(req.file.path, () => {});
+      return res.status(404).json({ message: "Assignment not found." });
+    }
+
+    const assignment = assignments[0];
+
+    const [existingUploads] = await query(
+      "SELECT id, file_path FROM peer_evaluation_uploads WHERE assignment_id = ? AND evaluator_id = ?", 
+      [assignmentId, req.user.id]
+    );
+
+    if (existingUploads.length > 0) {
+      if (existingUploads[0].file_path) {
+        const existingPath = path.join(existingUploads[0].file_path);
+        fs.unlink(existingPath, () => {});
+      }
+      await query("DELETE FROM peer_evaluation_uploads WHERE id = ?", [existingUploads[0].id]);
+    }
+
+    const relativePath = path.join("uploads", "peer-evaluations", req.file.filename);
+
+    const [result] = await query(
+      `INSERT INTO peer_evaluation_uploads
+       (assignment_id, evaluator_id, evaluated_id, file_name, file_path, file_type, file_size, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'submitted')`,
+      [assignmentId, req.user.id, assignment.evaluated_id, req.file.originalname, relativePath, req.file.mimetype, req.file.size]
+    );
+
+    await query("UPDATE peer_evaluation_assignments SET status = 'completed' WHERE id = ?", [assignmentId]);
+
+    await notifyAdmins({
+      title: "New Peer Evaluation Uploaded",
+      message: `A new peer evaluation has been submitted by ${req.user.full_name || "a lecturer"}.`,
+      type: "info",
+      relatedEntityType: "peer_evaluation_upload",
+      relatedEntityId: result.insertId,
+    });
+
+    res.status(201).json({
+      message: "Peer evaluation uploaded successfully.",
+      uploadId: result.insertId,
+    });
+  } catch (error) {
+    if (req.file?.path) fs.unlink(req.file.path, () => {});
+    res.status(500).json({ message: "Failed to upload peer evaluation.", error: error.message });
+  }
+};
+
+export const downloadPeerEvaluation = async (req, res) => {
+  try {
+    const uploadId = parsePositiveInt(req.params.uploadId);
+
+    if (!uploadId) {
+      return res.status(400).json({ message: "Valid upload ID is required." });
+    }
+
+    const [uploads] = await query(
+      `SELECT file_name, file_path
+       FROM peer_evaluation_uploads
+       WHERE id = ? AND evaluator_id = ?
+       LIMIT 1`,
+      [uploadId, req.user.id]
+    );
+
+    if (uploads.length === 0) {
+      return res.status(404).json({ message: "Upload not found." });
+    }
+
+    const storedName = path.basename(uploads[0].file_path);
+    const absolutePath = path.join(peerEvaluationsUploadDir, storedName);
+
+    if (!fs.existsSync(absolutePath)) {
+      return res.status(404).json({ message: "File not found." });
+    }
+
+    res.download(absolutePath, uploads[0].file_name);
+  } catch (error) {
+    res.status(500).json({ message: "Failed to download peer evaluation.", error: error.message });
+  }
 };

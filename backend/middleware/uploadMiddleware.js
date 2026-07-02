@@ -1,6 +1,6 @@
 import multer from "multer";
 import path from "path";
-import { profilePhotosUploadDir, supervisionReportsUploadDir } from "../utils/uploadDirectories.js";
+import { peerEvaluationsUploadDir, profilePhotosUploadDir, supervisionReportsUploadDir } from "../utils/uploadDirectories.js";
 
 const allowedMimeTypes = new Set([
   "application/pdf",
@@ -61,6 +61,38 @@ export const profilePhotoUpload = multer({
   fileFilter: (req, file, callback) => {
     if (!imageMimeTypes.has(file.mimetype)) {
       callback(Object.assign(new Error("Only JPG, PNG, and WEBP images are allowed."), { status: 400 }));
+      return;
+    }
+    callback(null, true);
+  },
+});
+
+const peerEvalMimeTypes = new Set([
+  "application/pdf",
+  "image/jpeg",
+  "image/png",
+]);
+
+const peerEvalExtensionByMimeType = {
+  "application/pdf": ".pdf",
+  "image/jpeg": ".jpg",
+  "image/png": ".png",
+};
+
+const peerEvalStorage = multer.diskStorage({
+  destination: (req, file, callback) => callback(null, peerEvaluationsUploadDir),
+  filename: (req, file, callback) => {
+    const extension = peerEvalExtensionByMimeType[file.mimetype] || path.extname(file.originalname).toLowerCase();
+    callback(null, `peereval-${req.user.id}-${Date.now()}-${Math.round(Math.random() * 1e9)}${extension}`);
+  },
+});
+
+export const peerEvaluationUpload = multer({
+  storage: peerEvalStorage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: (req, file, callback) => {
+    if (!peerEvalMimeTypes.has(file.mimetype)) {
+      callback(Object.assign(new Error("Only PDF, JPG, and PNG files are allowed."), { status: 400 }));
       return;
     }
     callback(null, true);

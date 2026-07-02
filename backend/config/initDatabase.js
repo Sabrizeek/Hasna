@@ -282,6 +282,33 @@ const createTables = [
     CONSTRAINT fk_reports_generated_by FOREIGN KEY (generated_by) REFERENCES users(id)
       ON UPDATE CASCADE ON DELETE RESTRICT
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+  `CREATE TABLE IF NOT EXISTS peer_evaluation_assignments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    evaluator_id INT NOT NULL,
+    evaluated_id INT NOT NULL,
+    semester_id INT NOT NULL,
+    academic_year VARCHAR(20) NOT NULL,
+    status ENUM('assigned', 'completed') NOT NULL DEFAULT 'assigned',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_peer_assignment_evaluator FOREIGN KEY (evaluator_id) REFERENCES users(id) ON UPDATE CASCADE ON DELETE CASCADE,
+    CONSTRAINT fk_peer_assignment_evaluated FOREIGN KEY (evaluated_id) REFERENCES users(id) ON UPDATE CASCADE ON DELETE CASCADE,
+    CONSTRAINT fk_peer_assignment_semester FOREIGN KEY (semester_id) REFERENCES semesters(id) ON UPDATE CASCADE ON DELETE CASCADE
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+  `CREATE TABLE IF NOT EXISTS peer_evaluation_uploads (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    assignment_id INT NOT NULL,
+    evaluator_id INT NOT NULL,
+    evaluated_id INT NOT NULL,
+    file_name VARCHAR(255) NOT NULL,
+    file_path VARCHAR(500) NOT NULL,
+    file_type VARCHAR(100) NOT NULL,
+    file_size INT UNSIGNED NOT NULL,
+    status ENUM('submitted', 'under_review', 'accepted', 'rejected') NOT NULL DEFAULT 'submitted',
+    submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_peer_upload_assignment FOREIGN KEY (assignment_id) REFERENCES peer_evaluation_assignments(id) ON UPDATE CASCADE ON DELETE CASCADE,
+    CONSTRAINT fk_peer_upload_evaluator FOREIGN KEY (evaluator_id) REFERENCES users(id) ON UPDATE CASCADE ON DELETE CASCADE,
+    CONSTRAINT fk_peer_upload_evaluated FOREIGN KEY (evaluated_id) REFERENCES users(id) ON UPDATE CASCADE ON DELETE CASCADE
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
 ];
 
 const questionSeeds = [
@@ -412,6 +439,9 @@ const createIndexes = async () => {
   await addIndexIfMissing("notifications", "idx_notifications_user_read", "user_id, is_read");
   await addIndexIfMissing("notifications", "idx_notifications_created_at", "created_at");
   await addIndexIfMissing("notifications", "idx_notifications_related", "related_entity_type, related_entity_id");
+  await addIndexIfMissing("peer_evaluation_assignments", "idx_peer_assignment_evaluator", "evaluator_id");
+  await addIndexIfMissing("peer_evaluation_assignments", "idx_peer_assignment_evaluated", "evaluated_id");
+  await addIndexIfMissing("peer_evaluation_uploads", "idx_peer_upload_assignment", "assignment_id");
 };
 
 const normalizeSemesters = async () => {
@@ -1162,6 +1192,30 @@ const backfillMissingUniversityIds = async () => {
   }
 };
 
+const seedPeerEvaluations = async () => {
+  const [semesters] = await query("SELECT id, academic_year FROM semesters WHERE is_active = 1 LIMIT 1");
+  if (semesters.length === 0) return;
+  const semester = semesters[0];
+
+  const [lecturers] = await query("SELECT id FROM users WHERE role = 'lecturer' AND status = 'approved'");
+  if (lecturers.length < 2) return;
+
+  for (let i = 0; i < lecturers.length; i++) {
+    const evaluator = lecturers[i].id;
+    const evaluated = lecturers[(i + 1) % lecturers.length].id;
+    
+    await query(
+      `INSERT INTO peer_evaluation_assignments (evaluator_id, evaluated_id, semester_id, academic_year)
+       SELECT ?, ?, ?, ?
+       WHERE NOT EXISTS (
+         SELECT 1 FROM peer_evaluation_assignments 
+         WHERE evaluator_id = ? AND evaluated_id = ? AND semester_id = ?
+       )`,
+      [evaluator, evaluated, semester.id, semester.academic_year, evaluator, evaluated, semester.id]
+    );
+  }
+};
+
 export const initializeDatabase = async () => {
   for (const statement of createTables) {
     await query(statement);
@@ -1222,4 +1276,5 @@ export const initializeDatabase = async () => {
   await seedDemoEvaluationSubmissions();
   await seedDemoNotifications();
   await repairChangedPasswordFlags();
+  await seedPeerEvaluations();
 };

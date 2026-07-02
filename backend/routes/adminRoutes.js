@@ -35,6 +35,13 @@ import {
   resetUserPassword,
   updateSupervisionReportStatus,
   updateUser,
+  getAdminPeerEvaluations,
+  updatePeerEvaluationStatus,
+  downloadAdminPeerEvaluation,
+  createPeerEvaluationAssignment,
+  getAdminPeerEvaluationAssignments,
+  deletePeerEvaluationAssignment,
+  updatePeerEvaluationAssignment,
 } from "../controllers/adminController.js";
 import { createAdminNotification } from "../controllers/notificationController.js";
 
@@ -76,5 +83,13 @@ router.get("/evaluations/:id", getAdminEvaluationById);
 router.get("/export/evaluations", exportEvaluations);
 router.get("/audit-logs", getAuditLogs);
 router.delete("/audit-logs/:id", deleteAuditLog);
+
+router.get("/peer-evaluations", getAdminPeerEvaluations);
+router.get("/peer-evaluations/assignments", getAdminPeerEvaluationAssignments);
+router.post("/peer-evaluations/assignments", createPeerEvaluationAssignment);
+router.put("/peer-evaluations/assignments/:evaluatedId/:semesterId", updatePeerEvaluationAssignment);
+router.delete("/peer-evaluations/assignments/:evaluatedId/:semesterId", deletePeerEvaluationAssignment);
+router.patch("/peer-evaluations/:id/status", updatePeerEvaluationStatus);
+router.get("/peer-evaluations/:id/download", downloadAdminPeerEvaluation);
 
 export default router;

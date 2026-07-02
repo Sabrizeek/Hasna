@@ -27,8 +27,8 @@ const PendingUsers = () => {
   return (
     <AdminLayout title="Pending Accounts">
       <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <div className="max-h-[34rem] overflow-y-auto overflow-x-hidden">
-          <table className="w-full table-fixed divide-y divide-slate-200 text-left text-sm [&_td]:break-words [&_th]:break-words">
+        <div className="max-h-[34rem] overflow-y-auto overflow-x-auto">
+          <table className="w-full table-fixed divide-y divide-slate-200 text-left text-sm [&_td]:break-words [&_th]:break-words min-w-[700px]">
             <thead className="sticky top-0 z-10 bg-white">
               <tr className="text-slate-500">
                 <th className="py-3 pr-4 font-semibold">Name</th>
@@ -36,7 +36,7 @@ const PendingUsers = () => {
                 <th className="py-3 pr-4 font-semibold">Role</th>
                 <th className="py-3 pr-4 font-semibold">Department</th>
                 <th className="py-3 pr-4 font-semibold">Status</th>
-                <th className="py-3 pr-4 font-semibold">Actions</th>
+                <th className="w-[180px] py-3 pr-4 font-semibold">Actions</th>
               </tr>
             </thead>
             <tbody>

@@ -27,40 +27,32 @@ const LandingPage = () => {
     <div className="min-h-screen bg-brandBg">
       <Navbar />
 
-      <section className="relative overflow-hidden bg-gradient-to-br from-brandBlue via-slate-900 to-slate-800 px-4 py-20 text-white sm:px-6 lg:px-8">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(212,175,55,0.25),transparent_35%),radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.12),transparent_28%)]" />
-        <div className="relative grid w-full gap-12 lg:grid-cols-[1.2fr_0.8fr] lg:items-center">
-          <div>
-            <div className="inline-flex rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.35em] text-brandGold">
-              Faculty of Science | University of Ruhuna
-            </div>
-            <h1 className="mt-6 max-w-3xl text-4xl font-black leading-tight sm:text-5xl lg:text-6xl">
-              Lecturer Evaluation System | Faculty of Science | University of Ruhuna
-            </h1>
-            <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-200">
-              A clean academic platform for lecturer evaluation, account approvals, announcements, and department administration.
-            </p>
-            <div className="mt-8 flex flex-wrap gap-4">
-              <Link to="/login?mode=student" className="rounded-full bg-brandGold px-6 py-3 font-semibold text-white transition hover:opacity-90">
-                Student Login
-              </Link>
-              <Link to="/login?mode=staff" className="rounded-full border border-white/30 px-6 py-3 font-semibold text-white transition hover:bg-white hover:text-brandBlue">
-                Staff Login
-              </Link>
-            </div>
-          </div>
+      <section className="relative overflow-hidden bg-gradient-to-br from-brandBlue via-slate-900 to-slate-800 px-4 py-24 text-white sm:px-6 lg:px-8">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(212,175,55,0.25),transparent_40%),radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.1),transparent_40%)]" />
+        
+        {/* Decorative ambient light */}
+        <div className="absolute left-1/2 top-0 -translate-x-1/2 rounded-full bg-brandGold/20 blur-[120px] w-[600px] h-[300px] pointer-events-none" />
 
-          <div className="rounded-3xl border border-white/10 bg-white/10 p-6 shadow-soft backdrop-blur">
-            <div className="rounded-2xl bg-white p-6 text-brandText shadow-xl">
-              <div className="text-sm font-semibold uppercase tracking-[0.3em] text-brandGold">System Flow</div>
-              <ol className="mt-4 space-y-3 text-sm leading-6 text-slate-700">
-                <li>1. Admin creates student and staff accounts.</li>
-                <li>2. Users receive a University ID and a temporary password by email.</li>
-                <li>3. Students log in with University ID.</li>
-                <li>4. Staff log in with University ID or email.</li>
-                <li>5. Users change the temporary password on first login.</li>
-              </ol>
-            </div>
+        <div className="relative z-10 mx-auto flex max-w-4xl flex-col items-center text-center pt-8 pb-12">
+          <div className="inline-flex rounded-full border border-white/20 bg-white/5 backdrop-blur-md px-5 py-2.5 text-xs font-bold uppercase tracking-[0.35em] text-brandGold shadow-xl">
+            Faculty of Science • University of Ruhuna
+          </div>
+          
+          <h1 className="mt-10 text-5xl font-extrabold tracking-tight sm:text-6xl lg:text-7xl lg:leading-[1.15]">
+            <span className="text-white drop-shadow-sm">Lecturer Evaluation</span>
+            <br />
+            <span className="bg-gradient-to-r from-brandGold via-yellow-200 to-amber-500 bg-clip-text text-transparent drop-shadow-sm">
+              System
+            </span>
+          </h1>
+          
+          <div className="mt-14 flex flex-wrap justify-center gap-6">
+            <Link to="/login?mode=student" className="rounded-full bg-gradient-to-r from-brandGold to-amber-500 px-8 py-4 text-sm font-bold text-slate-900 shadow-lg transition-all hover:-translate-y-1 hover:shadow-xl hover:opacity-95">
+              Student Login
+            </Link>
+            <Link to="/login?mode=staff" className="rounded-full border border-white/20 bg-white/10 backdrop-blur-md px-8 py-4 text-sm font-bold text-white shadow-lg transition-all hover:-translate-y-1 hover:bg-white/20 hover:shadow-xl">
+              Staff Login
+            </Link>
           </div>
         </div>
       </section>

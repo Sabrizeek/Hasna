@@ -8,6 +8,7 @@ const navItems = [
   { key: "dashboard", label: "Dashboard", to: "/lecturer/dashboard" },
   { key: "evaluations", label: "My Evaluations", to: "/lecturer/dashboard#evaluations" },
   { key: "reports", label: "Supervision Reports", to: "/lecturer/supervision-reports" },
+  { key: "peer", label: "Peer Evaluations", to: "/lecturer/peer-evaluations" },
 ];
 
 const LecturerLayout = ({ children }) => {

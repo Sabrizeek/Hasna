@@ -75,14 +75,14 @@ const SemesterManagement = () => {
         </form>
 
         <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div className="max-h-[34rem] overflow-y-auto overflow-x-hidden">
-            <table className="w-full table-fixed text-left text-sm [&_td]:break-words [&_th]:break-words">
+          <div className="max-h-[34rem] overflow-y-auto overflow-x-auto">
+            <table className="w-full table-fixed text-left text-sm [&_td]:break-words [&_th]:break-words min-w-[600px]">
               <thead className="sticky top-0 z-10 bg-white">
                 <tr className="text-slate-500">
                   <th className="py-3 pr-4 font-semibold">Semester</th>
                   <th className="py-3 pr-4 font-semibold">Year</th>
                   <th className="py-3 pr-4 font-semibold">Active</th>
-                  <th className="py-3 pr-4 font-semibold">Action</th>
+                  <th className="w-[300px] py-3 pr-4 font-semibold">Action</th>
                 </tr>
               </thead>
               <tbody>

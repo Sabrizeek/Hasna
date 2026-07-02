@@ -23,6 +23,7 @@ const Sidebar = () => {
         <NavLink to="/admin/semesters" className={linkClass}>Semesters</NavLink>
         <NavLink to="/admin/evaluation-windows" className={linkClass}>Evaluation Windows</NavLink>
         <NavLink to="/admin/announcements" className={linkClass}>Announcements</NavLink>
+        <NavLink to="/admin/peer-evaluations" className={linkClass}>Peer Evaluations</NavLink>
         <NavLink to="/admin/reports-audit" className={linkClass}>Reports & Audit</NavLink>
       </nav>
     </aside>

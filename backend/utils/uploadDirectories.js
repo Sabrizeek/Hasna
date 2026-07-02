@@ -13,7 +13,14 @@ export const profilePhotosUploadDir = path.resolve(
   "profile-photos"
 );
 
+export const peerEvaluationsUploadDir = path.resolve(
+  process.cwd(),
+  "uploads",
+  "peer-evaluations"
+);
+
 export const ensureUploadDirectories = async () => {
   await fs.mkdir(supervisionReportsUploadDir, { recursive: true });
   await fs.mkdir(profilePhotosUploadDir, { recursive: true });
+  await fs.mkdir(peerEvaluationsUploadDir, { recursive: true });
 };
