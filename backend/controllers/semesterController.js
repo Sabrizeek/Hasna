@@ -8,10 +8,6 @@ export const createSemester = async (req, res) => {
       return res.status(400).json({ message: "Semester name and academic year are required." });
     }
 
-    if (is_active) {
-      await query("UPDATE semesters SET is_active = 0");
-    }
-
     const [result] = await query(
       "INSERT INTO semesters (semester_name, academic_year, is_active) VALUES (?, ?, ?)",
       [semester_name, academic_year, is_active ? 1 : 0]
@@ -36,10 +32,6 @@ export const updateSemester = async (req, res) => {
   try {
     const { id } = req.params;
     const { semester_name, academic_year, is_active } = req.body;
-
-    if (is_active) {
-      await query("UPDATE semesters SET is_active = 0 WHERE id != ?", [id]);
-    }
 
     const [result] = await query(
       "UPDATE semesters SET semester_name = ?, academic_year = ?, is_active = ? WHERE id = ?",

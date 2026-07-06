@@ -49,11 +49,11 @@ const SemesterManagement = () => {
     loadSemesters();
   };
 
-  const setActive = async (semester) => {
+  const toggleActive = async (semester) => {
     await api.put(`/semesters/${semester.id}`, {
       semester_name: semester.semester_name,
       academic_year: semester.academic_year,
-      is_active: true,
+      is_active: !Number(semester.is_active),
     });
     loadSemesters();
   };
@@ -93,7 +93,9 @@ const SemesterManagement = () => {
                     <td className="py-4 pr-4 text-slate-600">{Number(semester.is_active) === 1 ? "Yes" : "No"}</td>
                     <td className="py-4 pr-4 whitespace-nowrap">
                       <div className="inline-flex flex-nowrap gap-2">
-                        <button onClick={() => setActive(semester)} type="button" className="rounded-full bg-green-600 px-4 py-2 text-xs font-semibold text-white">Set Active</button>
+                        <button onClick={() => toggleActive(semester)} type="button" className={`rounded-full px-4 py-2 text-xs font-semibold text-white transition ${Number(semester.is_active) === 1 ? 'bg-amber-500 hover:bg-amber-600' : 'bg-green-600 hover:bg-green-700'}`}>
+                          {Number(semester.is_active) === 1 ? 'Deactivate' : 'Activate'}
+                        </button>
                         <button onClick={() => handleEdit(semester)} type="button" className="rounded-full border border-brandBlue px-4 py-2 text-xs font-semibold text-brandBlue">Edit</button>
                         <button onClick={() => handleDelete(semester.id)} type="button" className="rounded-full bg-red-600 px-4 py-2 text-xs font-semibold text-white">Delete</button>
                       </div>
