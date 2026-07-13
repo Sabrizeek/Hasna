@@ -11,17 +11,13 @@ const parsePositiveInt = (value) => {
 };
 
 const emptyDistribution = () => ({
-  5: 0,
-  4: 0,
-  3: 0,
-  2: 0,
-  1: 0,
+  10: 0, 9: 0, 8: 0, 7: 0, 6: 0, 5: 0, 4: 0, 3: 0, 2: 0, 1: 0,
 });
 
 const toPercentages = (distribution, total) => {
   const percentages = emptyDistribution();
 
-  for (const score of [5, 4, 3, 2, 1]) {
+  for (const score of [10, 9, 8, 7, 6, 5, 4, 3, 2, 1]) {
     percentages[score] = total > 0 ? Number(((distribution[score] / total) * 100).toFixed(1)) : 0;
   }
 
@@ -112,18 +108,29 @@ export const getEvaluationResults = async (req, res) => {
     );
 
     const questionDistributions = new Map();
-    const overallGradeDistribution = emptyDistribution();
+    const overallGradeDistribution = {
+      "90-100%": 0,
+      "80-89%": 0,
+      "70-79%": 0,
+      "60-69%": 0,
+      "<60%": 0
+    };
 
     for (const question of questions) {
       questionDistributions.set(question.id, emptyDistribution());
     }
 
+    let totalOverallGrade = 0;
     for (const submission of submissionRows) {
       const grade = Number(submission.overall_grade);
-      if (overallGradeDistribution[grade] !== undefined) {
-        overallGradeDistribution[grade] += 1;
-      }
+      totalOverallGrade += grade;
+      if (grade >= 90) overallGradeDistribution["90-100%"] += 1;
+      else if (grade >= 80) overallGradeDistribution["80-89%"] += 1;
+      else if (grade >= 70) overallGradeDistribution["70-79%"] += 1;
+      else if (grade >= 60) overallGradeDistribution["60-69%"] += 1;
+      else overallGradeDistribution["<60%"] += 1;
     }
+    const averageOverallGrade = totalResponses > 0 ? (totalOverallGrade / totalResponses).toFixed(1) : 0;
 
     if (submissionIds.length > 0) {
       const placeholders = submissionIds.map(() => "?").join(", ");
@@ -174,6 +181,7 @@ export const getEvaluationResults = async (req, res) => {
         };
       }),
       overallGradeDistribution,
+      averageOverallGrade,
     });
   } catch (error) {
     res.status(500).json({ message: "Failed to fetch evaluation results.", error: error.message });

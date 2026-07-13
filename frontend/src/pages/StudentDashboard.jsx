@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios.js";
 import DashboardAnnouncements from "../components/DashboardAnnouncements.jsx";
@@ -6,326 +6,181 @@ import StudentLayout from "../components/StudentLayout.jsx";
 
 const StudentDashboard = () => {
   const navigate = useNavigate();
-  const [departments, setDepartments] = useState([]);
-  const [academicYears, setAcademicYears] = useState([]);
-  const [semesters, setSemesters] = useState([]);
-  const [courses, setCourses] = useState([]);
-  const [formData, setFormData] = useState({
-    departmentId: "",
-    academicYear: "",
-    semesterId: "",
-    courseId: "",
-  });
   const [loading, setLoading] = useState(true);
-  const [coursesLoading, setCoursesLoading] = useState(false);
-  const [windowLoading, setWindowLoading] = useState(false);
-  const [evaluationWindow, setEvaluationWindow] = useState(null);
   const [error, setError] = useState("");
+  
+  const [activeSemester, setActiveSemester] = useState(null);
+  const [evaluationWindow, setEvaluationWindow] = useState(null);
+  const [department, setDepartment] = useState(null);
+  const [courses, setCourses] = useState([]);
+  
+  const [selectedCourseIds, setSelectedCourseIds] = useState([]);
 
   useEffect(() => {
-    const loadFilters = async () => {
+    const loadDashboard = async () => {
       try {
-        const [departmentsRes, yearsRes, semestersRes] = await Promise.all([
-          api.get("/student/departments"),
-          api.get("/student/academic-years"),
-          api.get("/student/semesters"),
-        ]);
-
-        const loadedDepartments = departmentsRes.data.departments || [];
-        const loadedYears = yearsRes.data.academicYears || [];
-        const loadedSemesters = semestersRes.data.semesters || [];
-        const activeSemester = loadedSemesters.find((semester) => Number(semester.is_active) === 1);
-
-        setDepartments(loadedDepartments);
-        setAcademicYears(loadedYears);
-        setSemesters(loadedSemesters);
-        setFormData((current) => ({
-          ...current,
-          departmentId: current.departmentId || String(loadedDepartments[0]?.id || ""),
-          academicYear: current.academicYear || activeSemester?.academic_year || loadedYears[0] || "",
-          semesterId: current.semesterId || String(activeSemester?.id || loadedSemesters[0]?.id || ""),
-        }));
-      } catch (loadError) {
-        setError(loadError.response?.data?.message || "Unable to load course filters.");
+        setLoading(true);
+        const response = await api.get("/student/dashboard-data");
+        
+        setActiveSemester(response.data.activeSemester);
+        setEvaluationWindow(response.data.evaluationWindow);
+        setDepartment(response.data.department);
+        setCourses(response.data.courses || []);
+      } catch (err) {
+        setError(err.response?.data?.message || "Failed to load dashboard data.");
       } finally {
         setLoading(false);
       }
     };
-
-    loadFilters();
+    loadDashboard();
   }, []);
 
-  useEffect(() => {
-    const loadCourses = async () => {
-      if (!formData.departmentId || !formData.academicYear || !formData.semesterId) {
-        setCourses([]);
-        setFormData((current) => ({ ...current, courseId: "" }));
-        return;
-      }
+  const handleCourseSelection = (courseId) => {
+    setSelectedCourseIds((prev) =>
+      prev.includes(courseId)
+        ? prev.filter((id) => id !== courseId)
+        : [...prev, courseId]
+    );
+  };
 
-      setCoursesLoading(true);
-      setError("");
-
-      try {
-        const response = await api.get("/student/courses", {
-          params: {
-            departmentId: formData.departmentId,
-            academicYear: formData.academicYear,
-            semesterId: formData.semesterId,
-          },
-        });
-
-        const loadedCourses = response.data.courses || [];
-        setCourses(loadedCourses);
-        setFormData((current) => ({
-          ...current,
-          courseId: loadedCourses.some((course) => String(course.id) === current.courseId)
-            ? current.courseId
-            : String(loadedCourses[0]?.id || ""),
-        }));
-      } catch (loadError) {
-        setCourses([]);
-        setError(loadError.response?.data?.message || "Unable to load course units.");
-      } finally {
-        setCoursesLoading(false);
-      }
-    };
-
-    loadCourses();
-  }, [formData.departmentId, formData.academicYear, formData.semesterId]);
-
-  useEffect(() => {
-    const loadEvaluationWindow = async () => {
-      if (!formData.semesterId || !formData.academicYear) {
-        setEvaluationWindow(null);
-        return;
-      }
-
-      setWindowLoading(true);
-
-      try {
-        const response = await api.get("/student/evaluation-window", {
-          params: {
-            semesterId: formData.semesterId,
-            academicYear: formData.academicYear,
-          },
-        });
-        setEvaluationWindow(response.data);
-      } catch (windowError) {
-        setEvaluationWindow({
-          isOpen: false,
-          window: null,
-          message: windowError.response?.data?.message || "Unable to check evaluation window.",
-        });
-      } finally {
-        setWindowLoading(false);
-      }
-    };
-
-    loadEvaluationWindow();
-  }, [formData.semesterId, formData.academicYear]);
-
-  const selectedCourse = useMemo(
-    () => courses.find((course) => String(course.id) === formData.courseId),
-    [courses, formData.courseId]
+  const selectedCourses = useMemo(
+    () => courses.filter((course) => selectedCourseIds.includes(String(course.id))),
+    [courses, selectedCourseIds]
   );
 
-  const filteredSemesters = useMemo(() => {
-    if (!formData.academicYear) {
-      return semesters;
+  const isEvaluateDisabled = selectedCourses.length === 0 || !evaluationWindow?.isOpen;
+
+  const handleEvaluate = () => {
+    if (!isEvaluateDisabled) {
+      const courseIdsStr = selectedCourses.map(c => c.id).join(",");
+      navigate(`/student/evaluation-hub?courseIds=${courseIdsStr}&semesterId=${activeSemester?.id}&academicYear=${activeSemester?.academic_year}`);
     }
-
-    return semesters.filter((semester) => semester.academic_year === formData.academicYear);
-  }, [formData.academicYear, semesters]);
-
-  useEffect(() => {
-    if (filteredSemesters.length === 0) {
-      return;
-    }
-
-    if (!filteredSemesters.some((semester) => String(semester.id) === formData.semesterId)) {
-      setFormData((current) => ({
-        ...current,
-        semesterId: String(filteredSemesters[0].id),
-        courseId: "",
-      }));
-    }
-  }, [filteredSemesters, formData.semesterId]);
-
-  const handleChange = (event) => {
-    const { name, value } = event.target;
-    setFormData((current) => ({
-      ...current,
-      [name]: value,
-      courseId: name === "courseId" ? value : "",
-    }));
   };
 
-  const handleViewLecturers = () => {
-    if (!selectedCourse) {
-      setError("Please select a course unit before viewing lecturers.");
-      return;
-    }
-
-    if (!evaluationWindow?.isOpen) {
-      setError("Evaluation is not open for the selected semester.");
-      return;
-    }
-
-    const params = new URLSearchParams({
-      semesterId: formData.semesterId,
-      academicYear: formData.academicYear,
-      departmentId: formData.departmentId,
-    });
-
-    navigate(`/student/courses/${selectedCourse.id}/lecturers?${params.toString()}`);
-  };
+  if (loading) {
+    return (
+      <StudentLayout>
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brandBlue"></div>
+        </div>
+      </StudentLayout>
+    );
+  }
 
   return (
     <StudentLayout>
-      <section className="grid gap-8 lg:grid-cols-[1fr_360px]">
-        <div className="rounded-3xl border border-teal-100 bg-white p-6 shadow-sm sm:p-8">
-          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-teal-600">Student Dashboard</p>
-          <h2 className="mt-3 text-3xl font-bold text-slate-950">Choose your course unit</h2>
-          <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600">
-            Select the department, academic year, semester, and course unit to find the lecturer you want to evaluate.
-          </p>
+      <div className="max-w-7xl mx-auto space-y-6">
+        <h1 className="text-3xl font-bold text-slate-900">Student Dashboard</h1>
 
-          {error && (
-            <div className="mt-6 rounded-2xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-              {error}
-            </div>
-          )}
+        {error && (
+          <div className="bg-red-50 text-red-700 p-4 rounded-lg border border-red-200">
+            {error}
+          </div>
+        )}
 
-          {formData.semesterId && formData.academicYear && (
-            <div className={`mt-6 rounded-2xl border px-4 py-3 text-sm font-medium ${
-              evaluationWindow?.isOpen
-                ? "border-emerald-100 bg-emerald-50 text-emerald-700"
-                : "border-amber-100 bg-amber-50 text-amber-800"
-            }`}>
-              {windowLoading ? (
-                "Checking evaluation window..."
-              ) : evaluationWindow?.isOpen ? (
-                <>
-                  Evaluation is open from {new Date(evaluationWindow.window.open_date).toLocaleString()} to {new Date(evaluationWindow.window.close_date).toLocaleString()}.
-                </>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+              <h2 className="text-xl font-bold text-slate-900 mb-4">My Modules</h2>
+              
+              {!activeSemester ? (
+                <div className="bg-amber-50 text-amber-800 p-4 rounded-lg border border-amber-200">
+                  No active semester is currently set.
+                </div>
               ) : (
-                evaluationWindow?.message || "Evaluation is not open for this semester."
+                <div className="space-y-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
+                    <div>
+                      <p className="text-sm font-medium text-slate-500">Department</p>
+                      <p className="font-bold text-slate-900">{department?.name || "Unassigned"}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-slate-500">Academic Year</p>
+                      <p className="font-bold text-slate-900">{activeSemester.academic_year}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-slate-500">Semester</p>
+                      <p className="font-bold text-slate-900">{activeSemester.semester_name}</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-6">
+                    {courses.length === 0 ? (
+                      <div className="text-center py-8 bg-slate-50 rounded-lg border border-slate-200 border-dashed">
+                        <p className="text-slate-500">You are not registered for any modules in this semester.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <p className="text-sm font-semibold text-slate-700 mb-3">
+                          Select modules to evaluate:
+                        </p>
+                        {courses.map((course) => (
+                          <label
+                            key={course.id}
+                            className={`flex items-start space-x-3 p-4 rounded-lg border transition-colors ${
+                              !course.has_lecturers || course.is_evaluated
+                                ? "bg-slate-50 border-slate-200 opacity-60 cursor-not-allowed"
+                                : selectedCourseIds.includes(String(course.id))
+                                  ? "bg-brandBlue/5 border-brandBlue cursor-pointer"
+                                  : "bg-white border-slate-200 hover:bg-slate-50 cursor-pointer"
+                            }`}
+                          >
+                            <div className="flex-shrink-0 pt-0.5">
+                              <input
+                                type="checkbox"
+                                checked={selectedCourseIds.includes(String(course.id))}
+                                onChange={() => !course.is_evaluated && course.has_lecturers && handleCourseSelection(String(course.id))}
+                                disabled={!course.has_lecturers || course.is_evaluated}
+                                className="w-4 h-4 text-brandBlue rounded border-slate-300 focus:ring-brandBlue disabled:opacity-50 disabled:cursor-not-allowed"
+                              />
+                            </div>
+                            <div className="flex-1 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                              <div className="font-medium text-slate-900">
+                                {course.course_code} - {course.course_name}
+                              </div>
+                              {course.is_evaluated ? (
+                                <span className="inline-flex items-center rounded-md bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20 whitespace-nowrap">
+                                  Already Evaluated
+                                </span>
+                              ) : !course.has_lecturers ? (
+                                <span className="inline-flex items-center rounded-md bg-red-50 px-2 py-1 text-xs font-medium text-red-700 ring-1 ring-inset ring-red-600/10 whitespace-nowrap">
+                                  No Lecturers Assigned
+                                </span>
+                              ) : null}
+                            </div>
+                          </label>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="pt-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div className="text-sm text-slate-600">
+                      {selectedCourseIds.length} module(s) selected
+                    </div>
+                    
+                    {!evaluationWindow?.isOpen ? (
+                      <div className="text-amber-600 font-medium px-4 py-2 bg-amber-50 rounded-lg">
+                        {evaluationWindow?.message || "Evaluations are currently closed"}
+                      </div>
+                    ) : (
+                      <button
+                        onClick={handleEvaluate}
+                        disabled={isEvaluateDisabled}
+                        className="w-full sm:w-auto px-6 py-2.5 bg-brandBlue text-white font-semibold rounded-lg shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-brandBlue focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      >
+                        Start Evaluation
+                      </button>
+                    )}
+                  </div>
+                </div>
               )}
             </div>
-          )}
-
-          <div className="mt-8 grid gap-5 md:grid-cols-2">
-            <label className="space-y-2">
-              <span className="text-sm font-semibold text-slate-700">Department</span>
-              <select
-                name="departmentId"
-                value={formData.departmentId}
-                onChange={handleChange}
-                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-100"
-                disabled={loading}
-              >
-                <option value="">Select department</option>
-                {departments.map((department) => (
-                  <option key={department.id} value={department.id}>
-                    {department.department_name}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="space-y-2">
-              <span className="text-sm font-semibold text-slate-700">Academic Year</span>
-              <select
-                name="academicYear"
-                value={formData.academicYear}
-                onChange={handleChange}
-                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-100"
-                disabled={loading}
-              >
-                <option value="">Select academic year</option>
-                {academicYears.map((year) => (
-                  <option key={year} value={year}>
-                    {year}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="space-y-2">
-              <span className="text-sm font-semibold text-slate-700">Semester</span>
-              <select
-                name="semesterId"
-                value={formData.semesterId}
-                onChange={handleChange}
-                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-100"
-                disabled={loading}
-              >
-                <option value="">Select semester</option>
-                {filteredSemesters.map((semester) => (
-                  <option key={semester.id} value={semester.id}>
-                    {semester.semester_name} - {semester.academic_year}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="space-y-2">
-              <span className="text-sm font-semibold text-slate-700">Course Unit</span>
-              <select
-                name="courseId"
-                value={formData.courseId}
-                onChange={handleChange}
-                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-slate-900 outline-none transition focus:border-teal-500 focus:ring-4 focus:ring-teal-100"
-                disabled={coursesLoading || courses.length === 0}
-              >
-                <option value="">{coursesLoading ? "Loading course units..." : "Select course unit"}</option>
-                {courses.map((course) => (
-                  <option key={course.id} value={course.id}>
-                    {course.course_code} - {course.course_name}
-                  </option>
-                ))}
-              </select>
-              {!coursesLoading && formData.departmentId && formData.academicYear && formData.semesterId && courses.length === 0 && (
-                <span className="block text-xs font-medium text-amber-700">
-                  No course units match this department, academic year, and semester.
-                </span>
-              )}
-            </label>
           </div>
-
-          <button
-            type="button"
-            onClick={handleViewLecturers}
-            disabled={!selectedCourse || !evaluationWindow?.isOpen}
-            className="mt-8 rounded-2xl bg-teal-600 px-6 py-3 font-semibold text-white shadow-sm transition hover:bg-teal-700 disabled:cursor-not-allowed disabled:bg-slate-300"
-          >
-            View Lecturers
-          </button>
+          <div className="lg:col-span-1">
+            <DashboardAnnouncements role="student" />
+          </div>
         </div>
-
-        <aside className="rounded-3xl border border-teal-100 bg-teal-900 p-6 text-white shadow-sm">
-          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-teal-200">Selection Summary</p>
-          <div className="mt-6 space-y-4 text-sm">
-            <div>
-              <p className="text-teal-200">Department</p>
-              <p className="mt-1 font-semibold">{selectedCourse?.department_name || "Not selected"}</p>
-            </div>
-            <div>
-              <p className="text-teal-200">Academic Year</p>
-              <p className="mt-1 font-semibold">{formData.academicYear || "Not selected"}</p>
-            </div>
-            <div>
-              <p className="text-teal-200">Course Unit</p>
-              <p className="mt-1 font-semibold">
-                {selectedCourse ? `${selectedCourse.course_code} - ${selectedCourse.course_name}` : "Not selected"}
-              </p>
-            </div>
-          </div>
-        </aside>
-      </section>
-      <div className="mt-8">
-        <DashboardAnnouncements accent="teal" />
       </div>
     </StudentLayout>
   );

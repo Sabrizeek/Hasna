@@ -66,6 +66,7 @@ router.post("/notifications", createAdminNotification);
 router.get("/dashboard-stats", getDashboardStats);
 router.get("/module-assignments", getModuleAssignments);
 router.post("/module-assignments", createModuleAssignment);
+
 router.delete("/module-assignments/:id", deleteModuleAssignment);
 router.get("/award-scores", getLecturerAwardScores);
 router.patch("/award-scores/:lecturerId", updateLecturerAwardScore);

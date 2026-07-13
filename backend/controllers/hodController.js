@@ -77,7 +77,7 @@ export const getDepartmentOverview = async (req, res) => {
     );
 
     const [evaluationRows] = await query(
-      `SELECT COUNT(es.id) AS totalEvaluations, AVG(es.overall_grade) AS averageScore
+      `SELECT COUNT(es.id) AS totalEvaluations, ROUND(AVG(es.overall_grade), 1) AS averageScore
        FROM evaluation_submissions es
        INNER JOIN users u ON es.lecturer_id = u.id
        WHERE ${evalConditions.join(" AND ")}`,
@@ -109,9 +109,9 @@ export const getDepartmentOverview = async (req, res) => {
                 GROUP_CONCAT(DISTINCT CONCAT(c.course_code, ' - ', c.course_name) ORDER BY c.course_code SEPARATOR '; '),
                 ''
               ) AS modules,
-              AVG(CASE WHEN es.type = 'theory' THEN es.overall_grade END) AS theoryScore,
-              AVG(CASE WHEN es.type = 'practical' THEN es.overall_grade END) AS practicalScore,
-              AVG(es.overall_grade) AS overallScore,
+              ROUND(AVG(CASE WHEN es.type = 'theory' THEN es.overall_grade END), 1) AS theoryScore,
+              ROUND(AVG(CASE WHEN es.type = 'practical' THEN es.overall_grade END), 1) AS practicalScore,
+              ROUND(AVG(es.overall_grade), 1) AS overallScore,
               COUNT(DISTINCT sr.id) AS reportsSubmitted
        FROM users u
        LEFT JOIN courses c ON c.lecturer_id = u.id

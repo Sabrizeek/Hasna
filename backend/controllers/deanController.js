@@ -13,7 +13,7 @@ const parseFilters = (req) => ({
   academicYear: req.query.academicYear?.trim() || null,
 });
 
-const formatAverage = (value) => (value === null || value === undefined ? 0 : Number(Number(value).toFixed(2)));
+const formatAverage = (value) => (value === null || value === undefined ? 0 : Number(Number(value).toFixed(1)));
 
 const buildEvalConditions = (filters, params, alias = "es") => {
   const conditions = [];

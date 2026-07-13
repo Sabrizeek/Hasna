@@ -23,32 +23,13 @@ const parseScore = (value) => {
   return Number.isFinite(parsed) && parsed >= 0 && parsed <= 100 ? parsed : null;
 };
 
-const generateTemporaryPassword = (length = 14) => {
-  const uppercase = "ABCDEFGHJKLMNPQRSTUVWXYZ";
-  const lowercase = "abcdefghijkmnopqrstuvwxyz";
-  const digits = "23456789";
-  const symbols = "!@#$%^&*()-_=+";
-  const allChars = `${uppercase}${lowercase}${digits}${symbols}`;
-
-  const pick = (chars) => chars[crypto.randomInt(0, chars.length)];
-
-  const passwordChars = [
-    pick(uppercase),
-    pick(lowercase),
-    pick(digits),
-    pick(symbols),
-  ];
-
-  for (let index = passwordChars.length; index < length; index += 1) {
-    passwordChars.push(pick(allChars));
+const generateTemporaryPassword = (length = 8) => {
+  const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+  let randomPart = "";
+  for (let i = 0; i < length; i++) {
+    randomPart += chars[crypto.randomInt(0, chars.length)];
   }
-
-  for (let index = passwordChars.length - 1; index > 0; index -= 1) {
-    const swapIndex = crypto.randomInt(0, index + 1);
-    [passwordChars[index], passwordChars[swapIndex]] = [passwordChars[swapIndex], passwordChars[index]];
-  }
-
-  return passwordChars.join("");
+  return `Temp-${randomPart}`;
 };
 
 const escapeCsv = (value) => `"${String(value ?? "").replace(/"/g, '""')}"`;
@@ -104,7 +85,28 @@ export const getPendingUsers = async (req, res) => {
        ORDER BY u.created_at ASC`
     );
 
-    res.json({ users });
+    const [studentDepts] = await query(
+      `SELECT sd.student_id, sd.department_id, d.department_name 
+       FROM student_departments sd
+       JOIN departments d ON sd.department_id = d.id`
+    );
+
+    const sdMap = {};
+    for (const sd of studentDepts) {
+      if (!sdMap[sd.student_id]) sdMap[sd.student_id] = [];
+      sdMap[sd.student_id].push({ id: sd.department_id, name: sd.department_name });
+    }
+
+    const formattedUsers = users.map(u => {
+      if (u.role === 'student') {
+        const depts = sdMap[u.id] || [];
+        u.departmentIds = depts.map(d => d.id);
+        u.departmentNames = depts.map(d => d.name);
+      }
+      return u;
+    });
+
+    res.json({ users: formattedUsers });
   } catch (error) {
     res.status(500).json({ message: "Failed to fetch pending users.", error: error.message });
   }
@@ -156,7 +158,28 @@ export const getAllUsers = async (req, res) => {
        ORDER BY u.created_at DESC`
     );
 
-    res.json({ users });
+    const [studentDepts] = await query(
+      `SELECT sd.student_id, sd.department_id, d.department_name 
+       FROM student_departments sd
+       JOIN departments d ON sd.department_id = d.id`
+    );
+
+    const sdMap = {};
+    for (const sd of studentDepts) {
+      if (!sdMap[sd.student_id]) sdMap[sd.student_id] = [];
+      sdMap[sd.student_id].push({ id: sd.department_id, name: sd.department_name });
+    }
+
+    const formattedUsers = users.map(u => {
+      if (u.role === 'student') {
+        const depts = sdMap[u.id] || [];
+        u.departmentIds = depts.map(d => d.id);
+        u.departmentNames = depts.map(d => d.name);
+      }
+      return u;
+    });
+
+    res.json({ users: formattedUsers });
   } catch (error) {
     res.status(500).json({ message: "Failed to fetch users.", error: error.message });
   }
@@ -164,9 +187,9 @@ export const getAllUsers = async (req, res) => {
 
 export const createUser = async (req, res) => {
   try {
-    const { universityId, fullName, email, role, departmentId, phone, designation, qualifications, status = "approved" } = req.body;
+    const { universityId, fullName, email, role, departmentId, departmentIds, phone, designation, qualifications, status = "approved" } = req.body;
     const allowedRoles = ["student", "lecturer", "hod", "dean", "admin"];
-    const resolvedDepartmentId = departmentId ? parsePositiveInt(departmentId) : null;
+    const resolvedDepartmentId = (role !== "student" && role !== "admin" && departmentId) ? parsePositiveInt(departmentId) : null;
     const normalizedUniversityId = universityId?.trim();
     const normalizedFullName = fullName?.trim();
     const normalizedEmail = email?.trim();
@@ -175,7 +198,10 @@ export const createUser = async (req, res) => {
       return res.status(400).json({ message: "University ID, name, email and role are required." });
     }
     if (!allowedRoles.includes(role)) return res.status(400).json({ message: "Invalid user role." });
-    if (role !== "admin" && !resolvedDepartmentId) return res.status(400).json({ message: "Department is required for this role." });
+    if (role !== "admin" && role !== "student" && !resolvedDepartmentId) return res.status(400).json({ message: "Department is required for this role." });
+    if (role === "student" && (!departmentIds || !Array.isArray(departmentIds) || departmentIds.length === 0)) {
+      return res.status(400).json({ message: "At least one department must be selected for a student." });
+    }
 
     const temporaryPassword = generateTemporaryPassword();
     const hashedPassword = await bcrypt.hash(temporaryPassword, 10);
@@ -219,6 +245,17 @@ export const createUser = async (req, res) => {
         [normalizedUniversityId, normalizedFullName, normalizedEmail, hashedPassword, role, status, resolvedDepartmentId, phone || null, req.user.id]
       );
       userId = result.insertId;
+    }
+
+    if (role === "student") {
+      // Clear old departments in case it's restored
+      await query("DELETE FROM student_departments WHERE student_id = ?", [userId]);
+      for (const deptId of departmentIds) {
+        await query(
+          "INSERT INTO student_departments (student_id, department_id) VALUES (?, ?)",
+          [userId, parsePositiveInt(deptId)]
+        );
+      }
     }
 
     if (["lecturer", "hod", "dean"].includes(role)) {
@@ -271,12 +308,15 @@ export const createUser = async (req, res) => {
 export const updateUser = async (req, res) => {
   try {
     const id = parsePositiveInt(req.params.id);
-    const { universityId, fullName, email, role, departmentId, phone, status, designation, qualifications } = req.body;
+    const { universityId, fullName, email, role, departmentId, departmentIds, phone, status, designation, qualifications } = req.body;
     if (!id || !universityId || !fullName || !email || !role || !status) {
       return res.status(400).json({ message: "University ID, name, email, role and status are required." });
     }
-    const resolvedDepartmentId = role === "admin" ? null : parsePositiveInt(departmentId);
-    if (role !== "admin" && !resolvedDepartmentId) return res.status(400).json({ message: "Department is required for this role." });
+    const resolvedDepartmentId = (role !== "admin" && role !== "student" && departmentId) ? parsePositiveInt(departmentId) : null;
+    if (role !== "admin" && role !== "student" && !resolvedDepartmentId) return res.status(400).json({ message: "Department is required for this role." });
+    if (role === "student" && (!departmentIds || !Array.isArray(departmentIds) || departmentIds.length === 0)) {
+      return res.status(400).json({ message: "At least one department must be selected for a student." });
+    }
 
     const [result] = await query(
       `UPDATE users
@@ -285,6 +325,16 @@ export const updateUser = async (req, res) => {
       [universityId.trim(), fullName.trim(), email.trim(), role, status, resolvedDepartmentId, phone || null, id]
     );
     if (result.affectedRows === 0) return res.status(404).json({ message: "User not found." });
+
+    if (role === "student") {
+      await query("DELETE FROM student_departments WHERE student_id = ?", [id]);
+      for (const deptId of departmentIds) {
+        await query(
+          "INSERT INTO student_departments (student_id, department_id) VALUES (?, ?)",
+          [id, parsePositiveInt(deptId)]
+        );
+      }
+    }
 
     if (["lecturer", "hod", "dean"].includes(role)) {
       await query(
@@ -591,7 +641,7 @@ export const getModuleAssignments = async (req, res) => {
     const [assignments] = await query(
       `SELECT lm.id, lm.lecturer_id, u.full_name AS lecturer_name,
               c.id AS course_id, c.course_code, c.course_name, c.department_id,
-              d.department_name, s.id AS semester_id, s.semester_name, lm.academic_year
+              d.department_name, s.id AS semester_id, s.semester_name, lm.academic_year, lm.type
        FROM lecturer_modules lm
        INNER JOIN users u ON lm.lecturer_id = u.id
        INNER JOIN courses c ON lm.course_id = c.id
@@ -611,15 +661,27 @@ export const createModuleAssignment = async (req, res) => {
     const courseId = parsePositiveInt(req.body.courseId);
     const semesterId = parsePositiveInt(req.body.semesterId);
     const academicYear = req.body.academicYear?.trim();
+    const type = req.body.type?.trim();
 
-    if (!lecturerId || !courseId || !semesterId || !academicYear) {
-      return res.status(400).json({ message: "Lecturer, course, semester and academic year are required." });
+    if (!lecturerId || !courseId || !semesterId || !academicYear || !['theory', 'practical', 'both'].includes(type)) {
+      return res.status(400).json({ message: "Lecturer, course, semester, academic year and evaluation type are required." });
+    }
+
+    const [courseCheck] = await query("SELECT department_id FROM courses WHERE id = ?", [courseId]);
+    const [lecturerCheck] = await query("SELECT department_id FROM users WHERE id = ?", [lecturerId]);
+    
+    if (!courseCheck.length || !lecturerCheck.length) {
+      return res.status(404).json({ message: "Course or lecturer not found." });
+    }
+    
+    if (courseCheck[0].department_id !== lecturerCheck[0].department_id) {
+      return res.status(400).json({ message: "Lecturer must belong to the same department as the course." });
     }
 
     const [result] = await query(
-      `INSERT INTO lecturer_modules (lecturer_id, course_id, semester_id, academic_year)
-       VALUES (?, ?, ?, ?)`,
-      [lecturerId, courseId, semesterId, academicYear]
+      `INSERT INTO lecturer_modules (lecturer_id, course_id, semester_id, academic_year, type)
+       VALUES (?, ?, ?, ?, ?)`,
+      [lecturerId, courseId, semesterId, academicYear, type]
     );
 
     try {
@@ -673,11 +735,63 @@ export const deleteModuleAssignment = async (req, res) => {
   }
 };
 
+export const updateModuleAssignment = async (req, res) => {
+  try {
+    const id = parsePositiveInt(req.params.id);
+    const lecturerId = parsePositiveInt(req.body.lecturerId);
+    const courseId = parsePositiveInt(req.body.courseId);
+    const semesterId = parsePositiveInt(req.body.semesterId);
+    const academicYear = req.body.academicYear?.trim();
+    const type = req.body.type?.trim();
+
+    if (!id || !lecturerId || !courseId || !semesterId || !academicYear || !['theory', 'practical', 'both'].includes(type)) {
+      return res.status(400).json({ message: "Assignment ID, Lecturer, course, semester, academic year and evaluation type are required." });
+    }
+
+    const [courseCheck] = await query("SELECT department_id FROM courses WHERE id = ?", [courseId]);
+    const [lecturerCheck] = await query("SELECT department_id FROM users WHERE id = ?", [lecturerId]);
+    
+    if (!courseCheck.length || !lecturerCheck.length) {
+      return res.status(404).json({ message: "Course or lecturer not found." });
+    }
+    
+    if (courseCheck[0].department_id !== lecturerCheck[0].department_id) {
+      return res.status(400).json({ message: "Lecturer must belong to the same department as the course." });
+    }
+
+    const [result] = await query(
+      `UPDATE lecturer_modules 
+       SET lecturer_id = ?, course_id = ?, semester_id = ?, academic_year = ?, type = ?
+       WHERE id = ?`,
+      [lecturerId, courseId, semesterId, academicYear, type, id]
+    );
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ message: "Assignment not found." });
+    }
+
+    await logAudit({
+      userId: req.user.id,
+      action: "module_assignment_updated",
+      entityType: "lecturer_module",
+      entityId: id,
+      details: { lecturerId, courseId, semesterId, academicYear, type },
+    });
+
+    res.json({ message: "Module assignment updated successfully." });
+  } catch (error) {
+    if (error.code === "ER_DUP_ENTRY") {
+      return res.status(409).json({ message: "This lecturer is already assigned to that module." });
+    }
+    res.status(500).json({ message: "Failed to update module assignment.", error: error.message });
+  }
+};
+
 export const getEvaluationWindows = async (req, res) => {
   try {
     await syncEvaluationWindowStatuses();
     const [windows] = await query(
-      `SELECT ew.*, s.semester_name, u.full_name AS created_by_name
+      `SELECT ew.*, s.semester_name, s.is_active AS semester_is_active, u.full_name AS created_by_name
        FROM evaluation_windows ew
        INNER JOIN semesters s ON ew.semester_id = s.id
        LEFT JOIN users u ON ew.created_by = u.id
@@ -697,15 +811,25 @@ const getWindowStatus = (openDate, closeDate) => {
 };
 
 const syncEvaluationWindowStatuses = async () => {
-  await query("UPDATE evaluation_windows SET status = 'closed' WHERE status != 'closed' AND close_date <= NOW()");
-  await query("UPDATE evaluation_windows SET status = 'open' WHERE status = 'scheduled' AND open_date <= NOW() AND close_date > NOW()");
+  await query(`
+    UPDATE evaluation_windows ew
+    JOIN semesters s ON ew.semester_id = s.id
+    SET ew.status = 'closed'
+    WHERE ew.status != 'closed' AND (ew.close_date <= NOW() OR s.is_active = 0)
+  `);
+  await query(`
+    UPDATE evaluation_windows ew
+    JOIN semesters s ON ew.semester_id = s.id
+    SET ew.status = 'open'
+    WHERE ew.status = 'scheduled' AND ew.open_date <= NOW() AND ew.close_date > NOW() AND s.is_active = 1
+  `);
 };
 
 const validateWindow = async ({ semesterId, academicYear, openDate, closeDate, excludeId = null }) => {
   if (!semesterId || !academicYear || !openDate || !closeDate) return "Semester, academic year, open date and close date are required.";
   if (new Date(openDate) >= new Date(closeDate)) return "Open date must be before close date.";
   await syncEvaluationWindowStatuses();
-  const params = [semesterId, academicYear, closeDate, openDate];
+  const params = [semesterId];
   let exclude = "";
   if (excludeId) {
     exclude = "AND id != ?";
@@ -713,14 +837,12 @@ const validateWindow = async ({ semesterId, academicYear, openDate, closeDate, e
   }
   const [rows] = await query(
     `SELECT id FROM evaluation_windows
-     WHERE semester_id = ? AND academic_year = ?
-       AND status != 'closed'
-       AND open_date < ? AND close_date > ?
+     WHERE semester_id = ?
        ${exclude}
      LIMIT 1`,
     params
   );
-  return rows.length ? "Evaluation window overlaps with an existing window." : null;
+  return rows.length ? "An evaluation window already exists for this semester. Please edit or reopen the existing one instead." : null;
 };
 
 export const createEvaluationWindow = async (req, res) => {
@@ -789,8 +911,9 @@ export const reopenEvaluationWindow = async (req, res) => {
     const openDate = req.body.openDate;
     if (!id) return res.status(400).json({ message: "Valid evaluation window ID is required." });
 
-    const [existing] = await query("SELECT * FROM evaluation_windows WHERE id = ? LIMIT 1", [id]);
+    const [existing] = await query("SELECT ew.*, s.is_active FROM evaluation_windows ew JOIN semesters s ON ew.semester_id = s.id WHERE ew.id = ? LIMIT 1", [id]);
     if (existing.length === 0) return res.status(404).json({ message: "Evaluation window not found." });
+    if (existing[0].is_active === 0) return res.status(400).json({ message: "Cannot reopen window because the semester is deactivated." });
 
     const nextOpenDate = openDate || existing[0].open_date;
     const nextCloseDate = closeDate || existing[0].close_date;
@@ -1189,13 +1312,13 @@ export const getLecturerAwardScores = async (req, res) => {
        LEFT JOIN lecturer_award_scores las ON las.lecturer_id = u.id ${scoreJoinFilter}
        ${where}
        GROUP BY u.id, u.full_name, u.email, d.department_name
-       ORDER BY (COALESCE(AVG(es.overall_grade), 0) * 20 + COALESCE(MAX(las.supervision_score), 0)) DESC, u.full_name ASC`,
+       ORDER BY (COALESCE(AVG(es.overall_grade), 0) + COALESCE(MAX(las.supervision_score), 0)) DESC, u.full_name ASC`,
       [...evalParams, ...reportParams, ...scoreParams, ...params]
     );
 
     const lecturers = rows.map((row, index) => {
       const evaluationAverage = Number(row.evaluationAverage || 0);
-      const evaluationScore = Number((evaluationAverage * 20).toFixed(2));
+      const evaluationScore = Number(evaluationAverage.toFixed(2));
       const supervisionScore = Number(row.supervisionScore || 0);
       return {
         rank: index + 1,

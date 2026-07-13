@@ -1,23 +1,61 @@
-import { query } from "../config/db.js";
+import { query, getPool } from "../config/db.js";
 import { logAudit } from "../utils/auditLogger.js";
 
+const determineAssignmentType = (theory, practical) => {
+  if (theory && practical) return 'both';
+  if (theory) return 'theory';
+  if (practical) return 'practical';
+  return 'both'; // Fallback
+};
+
 export const createCourse = async (req, res) => {
+  let connection;
   try {
-    const { course_code, course_name, department_id, lecturer_id, semester_id } = req.body;
+    const { course_code, course_name, department_id, semester_id, is_core, assignments } = req.body;
 
     if (!course_code || !course_name || !department_id || !semester_id) {
       return res.status(400).json({ message: "Course code, course name, department and semester are required." });
     }
 
-    const [result] = await query(
-      "INSERT INTO courses (course_code, course_name, department_id, lecturer_id, semester_id) VALUES (?, ?, ?, ?, ?)",
-      [course_code, course_name, department_id, lecturer_id || null, semester_id]
-    );
+    const pool = await getPool();
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
 
-    await logAudit({ userId: req.user?.id, action: "course_created", entityType: "course", entityId: result.insertId, details: { course_code, course_name, department_id, lecturer_id, semester_id } });
-    res.status(201).json({ message: "Course created successfully.", courseId: result.insertId });
+    // Fetch the academic year for the selected semester
+    const [[semester]] = await connection.execute("SELECT academic_year FROM semesters WHERE id = ?", [semester_id]);
+    const academicYear = semester ? semester.academic_year : "2023/2024";
+
+    const [result] = await connection.execute(
+      "INSERT INTO courses (course_code, course_name, department_id, semester_id, is_core) VALUES (?, ?, ?, ?, ?)",
+      [course_code, course_name, department_id, semester_id, is_core !== undefined ? is_core : 1]
+    );
+    const courseId = result.insertId;
+
+    if (Array.isArray(assignments)) {
+      for (const assignment of assignments) {
+        if (!assignment.lecturerId) continue;
+        const type = determineAssignmentType(assignment.typeTheory, assignment.typePractical);
+        await connection.execute(
+          "INSERT INTO lecturer_modules (lecturer_id, course_id, semester_id, academic_year, type) VALUES (?, ?, ?, ?, ?)",
+          [
+            assignment.lecturerId,
+            courseId,
+            semester_id,
+            academicYear,
+            type
+          ]
+        );
+      }
+    }
+
+    await connection.commit();
+    await logAudit({ userId: req.user?.id, action: "course_created", entityType: "course", entityId: courseId, details: { course_code, course_name, department_id, semester_id, assignments } });
+    res.status(201).json({ message: "Course and assignments created successfully.", courseId });
   } catch (error) {
+    if (connection) await connection.rollback();
     res.status(500).json({ message: "Failed to create course.", error: error.message });
+  } finally {
+    if (connection) connection.release();
   }
 };
 
@@ -62,23 +100,58 @@ export const getCourseById = async (req, res) => {
 };
 
 export const updateCourse = async (req, res) => {
+  let connection;
   try {
     const { id } = req.params;
-    const { course_code, course_name, department_id, lecturer_id, semester_id } = req.body;
+    const { course_code, course_name, department_id, semester_id, is_core, assignments } = req.body;
 
-    const [result] = await query(
-      "UPDATE courses SET course_code = ?, course_name = ?, department_id = ?, lecturer_id = ?, semester_id = ? WHERE id = ?",
-      [course_code, course_name, department_id, lecturer_id || null, semester_id, id]
+    const pool = await getPool();
+    connection = await pool.getConnection();
+    await connection.beginTransaction();
+
+    // Fetch the academic year for the selected semester
+    const [[semester]] = await connection.execute("SELECT academic_year FROM semesters WHERE id = ?", [semester_id]);
+    const academicYear = semester ? semester.academic_year : "2023/2024";
+
+    const [result] = await connection.execute(
+      "UPDATE courses SET course_code = ?, course_name = ?, department_id = ?, semester_id = ?, is_core = ? WHERE id = ?",
+      [course_code, course_name, department_id, semester_id, is_core !== undefined ? is_core : 1, id]
     );
 
     if (result.affectedRows === 0) {
+      await connection.rollback();
       return res.status(404).json({ message: "Course not found." });
     }
 
-    await logAudit({ userId: req.user?.id, action: "course_updated", entityType: "course", entityId: Number(id), details: { course_code, course_name, department_id, lecturer_id, semester_id } });
+    if (Array.isArray(assignments)) {
+      // Clear existing assignments for this course
+      await connection.execute("DELETE FROM lecturer_modules WHERE course_id = ?", [id]);
+      
+      // Insert new ones
+      for (const assignment of assignments) {
+        if (!assignment.lecturerId) continue;
+        const type = determineAssignmentType(assignment.typeTheory, assignment.typePractical);
+        await connection.execute(
+          "INSERT INTO lecturer_modules (lecturer_id, course_id, semester_id, academic_year, type) VALUES (?, ?, ?, ?, ?)",
+          [
+            assignment.lecturerId,
+            id,
+            semester_id,
+            academicYear, 
+            type
+          ]
+        );
+      }
+    }
+
+    await connection.commit();
+    await logAudit({ userId: req.user?.id, action: "course_updated", entityType: "course", entityId: Number(id), details: { course_code, course_name, department_id, semester_id, assignments } });
     res.json({ message: "Course updated successfully." });
   } catch (error) {
+    if (connection) await connection.rollback();
     res.status(500).json({ message: "Failed to update course.", error: error.message });
+  } finally {
+    if (connection) connection.release();
   }
 };
 

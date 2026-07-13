@@ -6,25 +6,25 @@ import {
   createStudentSubmission,
   getCourseLecturers,
   getLecturerProfile,
-  getStudentAcademicYears,
-  getStudentCourses,
-  getStudentDepartments,
-  getStudentEvaluationWindow,
-  getStudentSemesters,
+  getDashboardData,
+  getEvaluationLecturers,
+  createBulkSubmissions,
+  getEligibleModules,
+  saveModuleSelections
 } from "../controllers/studentController.js";
 
 const router = Router();
 
 router.use(requireAuth, requireRole("student"));
 
-router.get("/departments", getStudentDepartments);
-router.get("/academic-years", getStudentAcademicYears);
-router.get("/semesters", getStudentSemesters);
-router.get("/evaluation-window", getStudentEvaluationWindow);
-router.get("/courses", getStudentCourses);
+router.get("/dashboard-data", getDashboardData);
 router.get("/courses/:courseId/lecturers", getCourseLecturers);
+router.get("/evaluation-lecturers", getEvaluationLecturers);
 router.get("/lecturers/:lecturerId/profile", getLecturerProfile);
 router.get("/submissions/check", checkStudentSubmission);
 router.post("/submissions", createStudentSubmission);
+router.post("/submissions/bulk", createBulkSubmissions);
+router.get("/eligible-modules", getEligibleModules);
+router.post("/module-selections", saveModuleSelections);
 
 export default router;

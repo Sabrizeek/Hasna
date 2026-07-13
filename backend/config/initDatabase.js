@@ -893,28 +893,33 @@ const seedDemoUsersAndCourses = async () => {
     }
     const mustChangePassword = ["hod", "dean"].includes(user.role) ? 0 : 1;
 
-    await query(
-      `INSERT INTO users (university_id, full_name, email, password, role, status, department_id, first_login, must_change_password)
-       VALUES (?, ?, ?, ?, ?, 'approved', ?, ?, ?)
-       ON DUPLICATE KEY UPDATE
-         university_id = COALESCE(university_id, VALUES(university_id)),
-         full_name = VALUES(full_name),
-         role = VALUES(role),
-         status = 'approved',
-         department_id = VALUES(department_id)`,
-      [user.university_id, user.full_name, user.email, hashedPassword, user.role, departmentId, mustChangePassword, mustChangePassword]
-    );
-
-    if (user.role === "lecturer") {
-      const userId = await getUserIdByEmail(user.email);
+    try {
       await query(
-        `INSERT INTO lecturer_profiles (user_id, designation, qualifications)
-         VALUES (?, ?, ?)
+        `INSERT INTO users (university_id, full_name, email, password, role, status, department_id, first_login, must_change_password)
+         VALUES (?, ?, ?, ?, ?, 'approved', ?, ?, ?)
          ON DUPLICATE KEY UPDATE
-           designation = COALESCE(NULLIF(designation, ''), VALUES(designation)),
-           qualifications = COALESCE(NULLIF(qualifications, ''), VALUES(qualifications))`,
-        [userId, user.designation, user.qualifications]
+           university_id = COALESCE(university_id, VALUES(university_id)),
+           full_name = VALUES(full_name),
+           role = VALUES(role),
+           status = 'approved',
+           department_id = VALUES(department_id)`,
+        [user.university_id, user.full_name, user.email, hashedPassword, user.role, departmentId, mustChangePassword, mustChangePassword]
       );
+
+      if (user.role === "lecturer") {
+        const userId = await getUserIdByEmail(user.email);
+        await query(
+          `INSERT INTO lecturer_profiles (user_id, designation, qualifications)
+           VALUES (?, ?, ?)
+           ON DUPLICATE KEY UPDATE
+             designation = COALESCE(NULLIF(designation, ''), VALUES(designation)),
+             qualifications = COALESCE(NULLIF(qualifications, ''), VALUES(qualifications))`,
+          [userId, user.designation, user.qualifications]
+        );
+      }
+    } catch (err) {
+      console.error(`Failed to seed user ${user.email} (ID: ${user.university_id}): ${err.message}`);
+      throw err;
     }
   }
 
@@ -972,22 +977,24 @@ const seedMalshaLongCommentSubmissions = async (questions) => {
     const student = students[0];
     if (!student) continue;
 
-    const grade = index % 5 === 0 ? 5 : index % 4 === 0 ? 3 : 4;
+    const baseScore = index % 5 === 0 ? 10 : index % 4 === 0 ? 6 : 8;
+    const overallGrade = (baseScore / 10) * 100;
+    
     const [existing] = await query(
       `SELECT id
        FROM evaluation_submissions
-       WHERE student_id = ? AND lecturer_id = ? AND course_id = ? AND semester_id = ? AND academic_year = ? AND type = 'theory'
+       WHERE student_id = ? AND lecturer_id = ? AND course_id = ? AND semester_id = ? AND type = 'theory'
        LIMIT 1`,
-      [student.id, course.lecturerId, course.courseId, course.semesterId, course.academicYear]
+      [student.id, course.lecturerId, course.courseId, course.semesterId]
     );
 
     let submissionId = existing[0]?.id;
     if (!submissionId) {
       const [result] = await query(
-        `INSERT INTO evaluation_submissions
+        `INSERT IGNORE INTO evaluation_submissions
          (student_id, lecturer_id, course_id, semester_id, academic_year, type, overall_grade, comment_text)
          VALUES (?, ?, ?, ?, ?, 'theory', ?, ?)`,
-        [student.id, course.lecturerId, course.courseId, course.semesterId, course.academicYear, grade, comment]
+        [student.id, course.lecturerId, course.courseId, course.semesterId, course.academicYear, overallGrade, comment]
       );
       submissionId = result.insertId;
     } else {
@@ -995,7 +1002,7 @@ const seedMalshaLongCommentSubmissions = async (questions) => {
         `UPDATE evaluation_submissions
          SET overall_grade = ?, comment_text = ?
          WHERE id = ?`,
-        [grade, comment, submissionId]
+        [overallGrade, comment, submissionId]
       );
     }
 
@@ -1006,7 +1013,7 @@ const seedMalshaLongCommentSubmissions = async (questions) => {
     if (Number(responseCount[0]?.count || 0) > 0) continue;
 
     for (const question of questions.theory) {
-      const score = Math.max(1, Math.min(5, grade - ((question.display_order + index) % 3 === 0 ? 1 : 0)));
+      const score = Math.max(1, Math.min(10, baseScore - ((question.display_order + index) % 3 === 0 ? 1 : 0)));
       await query(
         "INSERT INTO evaluation_responses (submission_id, question_id, score) VALUES (?, ?, ?)",
         [submissionId, question.id, score]
@@ -1055,20 +1062,22 @@ const seedDemoEvaluationSubmissions = async () => {
 
     for (const [studentIndex, student] of students.entries()) {
       for (const type of ["theory", "practical"]) {
-        const grade = Math.max(3, Math.min(5, 5 - ((studentIndex + (type === "practical" ? 0 : 1)) % 3)));
+        const baseScore = Math.max(6, Math.min(10, 10 - ((studentIndex + (type === "practical" ? 0 : 1)) % 3) * 2));
+        const overallGrade = (baseScore / 10) * 100;
+        
         const comment = demoEvaluationComments[type][studentIndex % demoEvaluationComments[type].length];
         const [existing] = await query(
           `SELECT id
            FROM evaluation_submissions
-           WHERE student_id = ? AND lecturer_id = ? AND course_id = ? AND semester_id = ? AND academic_year = ? AND type = ?
+           WHERE student_id = ? AND lecturer_id = ? AND course_id = ? AND semester_id = ? AND type = ?
            LIMIT 1`,
-          [student.id, course.lecturerId, course.courseId, course.semesterId, course.academicYear, type]
+          [student.id, course.lecturerId, course.courseId, course.semesterId, type]
         );
 
         let submissionId = existing[0]?.id;
         if (!submissionId) {
           const [result] = await query(
-            `INSERT INTO evaluation_submissions
+            `INSERT IGNORE INTO evaluation_submissions
              (student_id, lecturer_id, course_id, semester_id, academic_year, type, overall_grade, comment_text)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
             [
@@ -1078,7 +1087,7 @@ const seedDemoEvaluationSubmissions = async () => {
               course.semesterId,
               course.academicYear,
               type,
-              grade,
+              overallGrade,
               comment,
             ]
           );
@@ -1100,7 +1109,7 @@ const seedDemoEvaluationSubmissions = async () => {
         if (Number(responseCount[0]?.count || 0) > 0) continue;
 
         for (const question of questions[type]) {
-          const score = Math.max(1, Math.min(5, grade - ((question.display_order + studentIndex) % 2 === 0 ? 0 : 1)));
+          const score = Math.max(1, Math.min(10, baseScore - ((question.display_order + studentIndex) % 3 === 0 ? 1 : 0)));
           await query(
             "INSERT INTO evaluation_responses (submission_id, question_id, score) VALUES (?, ?, ?)",
             [submissionId, question.id, score]
@@ -1184,11 +1193,21 @@ const backfillMissingUniversityIds = async () => {
 
   for (const user of users) {
     const prefix = prefixes[user.role] || "UOR";
-    counters[user.role] = (counters[user.role] || 900) + 1;
-    const universityId = user.role === "student"
-      ? `${prefix}${String(counters[user.role]).padStart(3, "0")}`
-      : `${prefix}${String(counters[user.role]).padStart(3, "0")}`;
-    await query("UPDATE users SET university_id = ? WHERE id = ?", [universityId, user.id]);
+    let success = false;
+    while (!success) {
+      counters[user.role] = (counters[user.role] || 900) + 1;
+      const universityId = user.role === "student"
+        ? `${prefix}${String(counters[user.role]).padStart(3, "0")}`
+        : `${prefix}${String(counters[user.role]).padStart(3, "0")}`;
+      try {
+        await query("UPDATE users SET university_id = ? WHERE id = ?", [universityId, user.id]);
+        success = true;
+      } catch (err) {
+        if (err.code !== 'ER_DUP_ENTRY') {
+          throw err;
+        }
+      }
+    }
   }
 };
 

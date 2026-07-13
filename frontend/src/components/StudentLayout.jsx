@@ -10,6 +10,7 @@ const StudentLayout = ({ children }) => {
   const location = useLocation();
   const navItems = [
     { label: "Dashboard", to: "/student/dashboard" },
+    { label: "Module Registration", to: "/student/modules" },
     { label: "Notifications", to: "/notifications" },
     { label: "Profile", to: "/student/profile" },
   ];

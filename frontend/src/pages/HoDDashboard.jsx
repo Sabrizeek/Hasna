@@ -132,7 +132,7 @@ const HoDDashboard = () => {
   const kpiCards = [
     { label: "Total Lecturers", value: overview?.kpis?.totalLecturers ?? 0 },
     { label: "Total Evaluations", value: overview?.kpis?.totalEvaluations ?? 0 },
-    { label: "Average Score", value: overview?.kpis?.averageScore ?? 0 },
+    { label: "Average Score", value: overview?.kpis?.averageScore != null ? `${overview.kpis.averageScore}%` : "0%" },
     { label: "Pending Reports", value: overview?.kpis?.pendingReports ?? 0 },
   ];
 
@@ -185,7 +185,7 @@ const HoDDashboard = () => {
             ) : (overview?.chartData || []).length === 0 ? (
               <div className="flex h-full items-center justify-center text-sm font-medium text-amber-700">No lecturer evaluation data available.</div>
             ) : (
-              <Bar data={chartData} options={{ responsive: true, maintainAspectRatio: false, scales: { y: { min: 0, max: 5 } } }} />
+              <Bar data={chartData} options={{ responsive: true, maintainAspectRatio: false, scales: { y: { min: 0, max: 100 } } }} />
             )}
           </div>
         </div>
@@ -215,9 +215,9 @@ const HoDDashboard = () => {
                   <tr key={lecturer.lecturerId} className="border-t border-slate-100">
                     <td className="px-5 py-4 font-semibold text-slate-950">{lecturer.name}</td>
                     <td className="px-5 py-4 text-slate-600">{lecturer.modules.join(", ") || "No modules"}</td>
-                    <td className="px-5 py-4 text-slate-600">{lecturer.theoryScore}</td>
-                    <td className="px-5 py-4 text-slate-600">{lecturer.practicalScore}</td>
-                    <td className="px-5 py-4 font-bold text-amber-700">{lecturer.overallScore}</td>
+                    <td className="px-5 py-4 text-slate-600">{lecturer.theoryScore ? `${lecturer.theoryScore}%` : "-"}</td>
+                    <td className="px-5 py-4 text-slate-600">{lecturer.practicalScore ? `${lecturer.practicalScore}%` : "-"}</td>
+                    <td className="px-5 py-4 font-bold text-amber-700">{lecturer.overallScore ? `${lecturer.overallScore}%` : "-"}</td>
                     <td className="px-5 py-4 text-slate-600">{lecturer.reportsSubmitted}</td>
                     <td className="w-40 px-5 py-4 whitespace-nowrap">
                       <Link

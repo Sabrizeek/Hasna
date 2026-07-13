@@ -95,7 +95,7 @@ const DeanDashboard = () => {
   const kpiCards = [
     ["Total Lecturers", overview?.kpis?.totalLecturers || 0],
     ["Total Evaluations Completed", overview?.kpis?.totalEvaluationsCompleted || 0],
-    ["Faculty Average Score", overview?.kpis?.facultyAverageScore || 0],
+    ["Faculty Average Score", overview?.kpis?.facultyAverageScore != null ? `${overview.kpis.facultyAverageScore}%` : "0%"],
     ["Departments Evaluated", overview?.kpis?.departmentsEvaluated || 0],
   ];
 
@@ -109,7 +109,7 @@ const DeanDashboard = () => {
           <div key={`${title}-${item.lecturerId}`} className="rounded-2xl bg-slate-50 p-4">
             <p className="font-bold text-slate-950">{item.name}</p>
             <p className="mt-1 text-sm text-slate-600">{item.departmentName}</p>
-            <p className="mt-2 text-2xl font-bold text-orange-700">{item.averageScore}</p>
+            <p className="mt-2 text-2xl font-bold text-orange-700">{item.averageScore != null ? `${item.averageScore}%` : "-"}</p>
           </div>
         ))}
       </div>
@@ -167,7 +167,7 @@ const DeanDashboard = () => {
                       navigate(`/dean/departments/${department.departmentId}?semesterId=${filters.semesterId}&academicYear=${encodeURIComponent(filters.academicYear)}`);
                     }
                   },
-                  scales: { y: { min: 0, max: 5 } },
+                  scales: { y: { min: 0, max: 100 } },
                 }}
               />
             )}
@@ -181,7 +181,7 @@ const DeanDashboard = () => {
               >
                 <p className="font-bold text-slate-950">{department.departmentName}</p>
                 <p className="mt-1 text-sm text-slate-600">{department.totalEvaluations} evaluations</p>
-                <p className="mt-2 text-2xl font-bold text-orange-700">{department.averageScore}</p>
+                <p className="mt-2 text-2xl font-bold text-orange-700">{department.averageScore != null ? `${department.averageScore}%` : "-"}</p>
               </Link>
             ))}
           </div>

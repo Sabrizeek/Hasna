@@ -27,7 +27,8 @@ const EvaluationWindowManagement = () => {
       api.get("/admin/evaluation-windows"),
     ]);
     const loadedSemesters = semestersRes.data.semesters || [];
-    const first = loadedSemesters[0];
+    const activeSemesters = loadedSemesters.filter(s => s.is_active);
+    const first = activeSemesters[0];
     setSemesters(loadedSemesters);
     setWindows(windowsRes.data.windows || []);
     setWindowForm((current) => ({
@@ -153,8 +154,9 @@ const EvaluationWindowManagement = () => {
         <form onSubmit={saveWindow} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
           <h3 className="text-xl font-bold text-brandBlue">{editingId ? "Edit Evaluation Window" : "Add Evaluation Window"}</h3>
           <p className="mt-2 text-sm leading-6 text-slate-600">Control when students can submit lecturer evaluations for a semester.</p>
-          <select value={windowForm.semesterId} onChange={(event) => syncSemester(event.target.value)} className="mt-5 w-full rounded-2xl border border-slate-300 px-4 py-3">
-            {semesters.map((semester) => <option key={semester.id} value={semester.id}>{semester.semester_name} - {semester.academic_year}</option>)}
+          <select value={windowForm.semesterId} onChange={(event) => syncSemester(event.target.value)} className="mt-5 w-full rounded-2xl border border-slate-300 px-4 py-3" required>
+            <option value="" disabled>Select an active semester</option>
+            {semesters.filter(s => s.is_active).map((semester) => <option key={semester.id} value={semester.id}>{semester.semester_name} - {semester.academic_year}</option>)}
           </select>
           <label className="mt-4 block space-y-2">
             <span className="text-sm font-semibold text-slate-700">Open Date</span>
@@ -189,7 +191,14 @@ const EvaluationWindowManagement = () => {
                   <div className="flex flex-wrap gap-2">
                     <button onClick={() => editWindow(window)} className="rounded-full border border-brandBlue px-4 py-2 text-xs font-semibold text-brandBlue">Edit</button>
                     {isClosed ? (
-                      <button onClick={() => reopenWindow(window)} disabled={busyId === window.id} className="rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white disabled:bg-slate-300">Reopen</button>
+                      <button 
+                        onClick={() => reopenWindow(window)} 
+                        disabled={busyId === window.id || window.semester_is_active === 0} 
+                        title={window.semester_is_active === 0 ? "Cannot reopen because the semester is deactivated" : ""}
+                        className="rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white disabled:bg-slate-300 disabled:cursor-not-allowed"
+                      >
+                        Reopen
+                      </button>
                     ) : (
                       <button
                         onClick={() => closeNow(window.id)}

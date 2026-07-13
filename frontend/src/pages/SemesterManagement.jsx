@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import AdminLayout from "../components/AdminLayout.jsx";
 import api from "../api/axios.js";
 
@@ -8,6 +8,16 @@ const SemesterManagement = () => {
   const [semesters, setSemesters] = useState([]);
   const [formData, setFormData] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterStatus, setFilterStatus] = useState("all");
+
+  const filteredSemesters = useMemo(() => {
+    return semesters.filter(s => {
+      const matchesSearch = (s.semester_name + " " + s.academic_year).toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesStatus = filterStatus === "all" || (filterStatus === "active" && Number(s.is_active) === 1) || (filterStatus === "inactive" && Number(s.is_active) === 0);
+      return matchesSearch && matchesStatus;
+    });
+  }, [semesters, searchQuery, filterStatus]);
 
   const loadSemesters = async () => {
     const response = await api.get("/semesters");
@@ -74,7 +84,30 @@ const SemesterManagement = () => {
           <button className="mt-5 rounded-2xl bg-brandBlue px-5 py-3 font-semibold text-white">{editingId ? "Update" : "Save"}</button>
         </form>
 
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col">
+          <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <h3 className="text-xl font-bold text-brandBlue">Semesters</h3>
+              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">{filteredSemesters.length} records</span>
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <input 
+                placeholder="Search semesters..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="rounded-2xl border border-slate-300 px-4 py-2 text-sm outline-none transition focus:border-brandBlue w-full sm:w-64"
+              />
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="rounded-2xl border border-slate-300 px-4 py-2 text-sm outline-none transition focus:border-brandBlue w-full sm:w-auto"
+              >
+                <option value="all">All Statuses</option>
+                <option value="active">Active</option>
+                <option value="inactive">Inactive</option>
+              </select>
+            </div>
+          </div>
           <div className="max-h-[34rem] overflow-y-auto overflow-x-auto">
             <table className="w-full table-fixed text-left text-sm [&_td]:break-words [&_th]:break-words min-w-[600px]">
               <thead className="sticky top-0 z-10 bg-white">
@@ -86,7 +119,7 @@ const SemesterManagement = () => {
                 </tr>
               </thead>
               <tbody>
-                {semesters.map((semester) => (
+                {filteredSemesters.map((semester) => (
                   <tr key={semester.id} className="border-t border-slate-100">
                     <td className="py-4 pr-4 font-medium">{semester.semester_name}</td>
                     <td className="py-4 pr-4 text-slate-600">{semester.academic_year}</td>

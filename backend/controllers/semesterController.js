@@ -9,8 +9,13 @@ export const createSemester = async (req, res) => {
     }
 
     const [result] = await query(
-      "INSERT INTO semesters (semester_name, academic_year, is_active) VALUES (?, ?, ?)",
-      [semester_name, academic_year, is_active ? 1 : 0]
+      "INSERT INTO semesters (semester_name, academic_year, is_active, module_selection_deadline) VALUES (?, ?, ?, ?)",
+      [
+        semester_name, 
+        academic_year, 
+        is_active ? 1 : 0, 
+        is_active ? new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) : null
+      ]
     );
 
     res.status(201).json({ message: "Semester created successfully.", semesterId: result.insertId });
@@ -33,9 +38,22 @@ export const updateSemester = async (req, res) => {
     const { id } = req.params;
     const { semester_name, academic_year, is_active } = req.body;
 
+    const [existing] = await query("SELECT is_active, module_selection_deadline FROM semesters WHERE id = ?", [id]);
+    if (!existing.length) {
+      return res.status(404).json({ message: "Semester not found." });
+    }
+
+    let newDeadline = existing[0].module_selection_deadline;
+    if (is_active && !existing[0].is_active) {
+      // Automatically set 7 days from now if activating
+      newDeadline = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    } else if (!is_active) {
+      newDeadline = null; // Clear deadline if deactivating
+    }
+
     const [result] = await query(
-      "UPDATE semesters SET semester_name = ?, academic_year = ?, is_active = ? WHERE id = ?",
-      [semester_name, academic_year, is_active ? 1 : 0, id]
+      "UPDATE semesters SET semester_name = ?, academic_year = ?, is_active = ?, module_selection_deadline = ? WHERE id = ?",
+      [semester_name, academic_year, is_active ? 1 : 0, newDeadline, id]
     );
 
     if (result.affectedRows === 0) {

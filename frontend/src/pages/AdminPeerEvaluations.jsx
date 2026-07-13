@@ -1,4 +1,4 @@
-import { useEffect, useState, Fragment } from "react";
+import { useEffect, useState, Fragment, useMemo } from "react";
 import api from "../api/axios.js";
 import AdminLayout from "../components/AdminLayout.jsx";
 import SearchableSelect from "../components/SearchableSelect.jsx";
@@ -10,6 +10,8 @@ const AdminPeerEvaluations = () => {
   const [lecturers, setLecturers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [searchAssignments, setSearchAssignments] = useState("");
+  const [searchUploads, setSearchUploads] = useState("");
   
   const [editingGroup, setEditingGroup] = useState(null);
 
@@ -156,12 +158,12 @@ const AdminPeerEvaluations = () => {
   const semesterOptions = semesters.map((s) => ({ value: s.id, label: `${s.semester_name} - ${s.academic_year}` }));
   const lecturerOptions = lecturers.map((l) => ({ value: l.id, label: l.full_name }));
 
-  const groupedAssignments = Object.values(assignments.reduce((acc, curr) => {
+  const groupedAssignments = useMemo(() => Object.values(assignments.reduce((acc, curr) => {
     const key = `${curr.evaluated_name}-${curr.semester_name}-${curr.academic_year}`;
     if (!acc[key]) {
       acc[key] = {
         key: key,
-        evaluated_id: curr.evaluated_id, // Need these for the API endpoints
+        evaluated_id: curr.evaluated_id, 
         semester_id: curr.semester_id,
         evaluated_name: curr.evaluated_name,
         semester_name: curr.semester_name,
@@ -173,9 +175,9 @@ const AdminPeerEvaluations = () => {
       acc[key].evaluator2 = curr;
     }
     return acc;
-  }, {}));
+  }, {})), [assignments]);
 
-  const groupedUploads = Object.values(uploads.reduce((acc, curr) => {
+  const groupedUploads = useMemo(() => Object.values(uploads.reduce((acc, curr) => {
     const key = `${curr.evaluated_name}-${curr.semester_name}-${curr.academic_year}`;
     if (!acc[key]) {
       acc[key] = {
@@ -188,7 +190,24 @@ const AdminPeerEvaluations = () => {
     }
     acc[key].submissions.push(curr);
     return acc;
-  }, {}));
+  }, {})), [uploads]);
+
+  const filteredGroupedAssignments = useMemo(() => {
+    return groupedAssignments.filter(g => 
+      (g.evaluated_name || "").toLowerCase().includes((searchAssignments || "").toLowerCase()) || 
+      (g.evaluator1 && (g.evaluator1.evaluator_name || "").toLowerCase().includes((searchAssignments || "").toLowerCase())) ||
+      (g.evaluator2 && (g.evaluator2.evaluator_name || "").toLowerCase().includes((searchAssignments || "").toLowerCase())) ||
+      (g.semester_name || "").toLowerCase().includes((searchAssignments || "").toLowerCase())
+    );
+  }, [groupedAssignments, searchAssignments]);
+
+  const filteredGroupedUploads = useMemo(() => {
+    return groupedUploads.filter(g => 
+      (g.evaluated_name || "").toLowerCase().includes((searchUploads || "").toLowerCase()) ||
+      (g.semester_name || "").toLowerCase().includes((searchUploads || "").toLowerCase()) ||
+      g.submissions.some(s => (s.evaluator_name || "").toLowerCase().includes((searchUploads || "").toLowerCase()))
+    );
+  }, [groupedUploads, searchUploads]);
 
   return (
     <AdminLayout title="Peer Evaluations">
@@ -267,10 +286,21 @@ const AdminPeerEvaluations = () => {
         </form>
 
         {/* Middle: Assigned Lecturers List */}
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div>
-            <h3 className="text-xl font-bold text-brandBlue">Assigned Lecturers List</h3>
-            <p className="mt-1 text-sm text-slate-500">View the list of lecturers assigned for peer evaluation.</p>
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col">
+          <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="flex items-center gap-3">
+                <h3 className="text-xl font-bold text-brandBlue">Assigned Lecturers List</h3>
+                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">{filteredGroupedAssignments.length} records</span>
+              </div>
+              <p className="mt-1 text-sm text-slate-500">View the list of lecturers assigned for peer evaluation.</p>
+            </div>
+            <input 
+              placeholder="Search assignments..." 
+              value={searchAssignments}
+              onChange={(e) => setSearchAssignments(e.target.value)}
+              className="rounded-2xl border border-slate-300 px-4 py-2 text-sm outline-none transition focus:border-brandBlue w-full sm:w-64"
+            />
           </div>
 
           <div className="mt-6 max-h-[20rem] overflow-y-scroll overflow-x-hidden">
@@ -289,10 +319,10 @@ const AdminPeerEvaluations = () => {
               <tbody>
                 {loading ? (
                   <tr><td colSpan="7" className="py-6 text-center text-slate-500">Loading assignments...</td></tr>
-                ) : groupedAssignments.length === 0 ? (
+                ) : filteredGroupedAssignments.length === 0 ? (
                   <tr><td colSpan="7" className="py-6 text-center text-slate-500">No active assignments found.</td></tr>
                 ) : (
-                  groupedAssignments.map((group) => (
+                  filteredGroupedAssignments.map((group) => (
                     <tr key={group.key} className="border-t border-slate-100">
                       <td className="py-4 font-medium whitespace-nowrap">{group.evaluated_name}</td>
                       <td className="py-4 text-slate-600 whitespace-nowrap">
@@ -348,10 +378,21 @@ const AdminPeerEvaluations = () => {
         </div>
 
         {/* Bottom: Uploads Table */}
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-          <div>
-            <h3 className="text-xl font-bold text-brandBlue">Peer Evaluation Uploads</h3>
-            <p className="mt-1 text-sm text-slate-500">Review and manage uploaded paper-based peer evaluations.</p>
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col">
+          <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="flex items-center gap-3">
+                <h3 className="text-xl font-bold text-brandBlue">Peer Evaluation Uploads</h3>
+                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">{filteredGroupedUploads.length} records</span>
+              </div>
+              <p className="mt-1 text-sm text-slate-500">Review and manage uploaded paper-based peer evaluations.</p>
+            </div>
+            <input 
+              placeholder="Search uploads..." 
+              value={searchUploads}
+              onChange={(e) => setSearchUploads(e.target.value)}
+              className="rounded-2xl border border-slate-300 px-4 py-2 text-sm outline-none transition focus:border-brandBlue w-full sm:w-64"
+            />
           </div>
 
           <div className="mt-6 max-h-[20rem] overflow-y-scroll overflow-x-hidden">
@@ -369,10 +410,10 @@ const AdminPeerEvaluations = () => {
               <tbody>
                 {loading ? (
                   <tr><td colSpan="6" className="py-6 text-center text-slate-500">Loading uploads...</td></tr>
-                ) : groupedUploads.length === 0 ? (
+                ) : filteredGroupedUploads.length === 0 ? (
                   <tr><td colSpan="6" className="py-6 text-center text-slate-500">No peer evaluations have been uploaded yet.</td></tr>
                 ) : (
-                  groupedUploads.map((group) => (
+                  filteredGroupedUploads.map((group) => (
                     <Fragment key={group.key}>
                       {group.submissions.map((upload, index) => (
                         <tr key={upload.id} className={`${index === group.submissions.length - 1 ? 'border-b border-slate-200' : 'border-b border-slate-50'} hover:bg-slate-50 transition-colors`}>

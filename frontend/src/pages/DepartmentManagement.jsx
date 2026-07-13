@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import AdminLayout from "../components/AdminLayout.jsx";
 import api from "../api/axios.js";
 
@@ -8,6 +8,13 @@ const DepartmentManagement = () => {
   const [departments, setDepartments] = useState([]);
   const [formData, setFormData] = useState(emptyForm);
   const [editingId, setEditingId] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredDepartments = useMemo(() => {
+    return departments.filter(d => 
+      (d.department_name + " " + d.faculty_name).toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [departments, searchQuery]);
 
   const loadDepartments = async () => {
     const response = await api.get("/departments");
@@ -56,7 +63,19 @@ const DepartmentManagement = () => {
           <button className="mt-5 rounded-2xl bg-brandBlue px-5 py-3 font-semibold text-white">{editingId ? "Update" : "Save"}</button>
         </form>
 
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col">
+          <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-center gap-3">
+              <h3 className="text-xl font-bold text-brandBlue">Departments</h3>
+              <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">{filteredDepartments.length} records</span>
+            </div>
+            <input 
+              placeholder="Search departments..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="rounded-2xl border border-slate-300 px-4 py-2 text-sm outline-none transition focus:border-brandBlue w-full sm:w-64"
+            />
+          </div>
           <div className="max-h-[34rem] overflow-y-auto overflow-x-hidden">
             <table className="w-full table-fixed text-left text-sm [&_td]:break-words [&_th]:break-words">
               <thead className="sticky top-0 z-10 bg-white">
@@ -67,7 +86,7 @@ const DepartmentManagement = () => {
                 </tr>
               </thead>
               <tbody>
-                {departments.map((department) => (
+                {filteredDepartments.map((department) => (
                   <tr key={department.id} className="border-t border-slate-100">
                     <td className="py-4 pr-4 font-medium">{department.department_name}</td>
                     <td className="py-4 pr-4 text-slate-600">{department.faculty_name}</td>

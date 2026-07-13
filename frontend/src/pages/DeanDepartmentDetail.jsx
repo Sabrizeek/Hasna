@@ -133,7 +133,7 @@ const DeanDepartmentDetail = () => {
                   indexAxis: "y",
                   responsive: true,
                   maintainAspectRatio: false,
-                  scales: { x: { min: 0, max: 5 } },
+                  scales: { x: { min: 0, max: 100 } },
                 }}
               />
             )}
@@ -158,9 +158,9 @@ const DeanDepartmentDetail = () => {
                   <tr key={lecturer.lecturerId} className="border-t border-slate-100">
                     <td className="px-5 py-4 font-semibold text-slate-950">{lecturer.name}</td>
                     <td className="px-5 py-4 text-slate-600">{lecturer.department}</td>
-                    <td className="px-5 py-4 text-slate-600">{lecturer.theoryScore}</td>
-                    <td className="px-5 py-4 text-slate-600">{lecturer.practicalScore}</td>
-                    <td className="px-5 py-4 font-bold text-orange-700">{lecturer.overallScore}</td>
+                    <td className="px-5 py-4 text-slate-600">{lecturer.theoryScore ? `${lecturer.theoryScore}%` : "-"}</td>
+                    <td className="px-5 py-4 text-slate-600">{lecturer.practicalScore ? `${lecturer.practicalScore}%` : "-"}</td>
+                    <td className="px-5 py-4 font-bold text-orange-700">{lecturer.overallScore ? `${lecturer.overallScore}%` : "-"}</td>
                     <td className="w-32 px-5 py-4 whitespace-nowrap">
                       <Link
                         to={`/dean/lecturers/${lecturer.lecturerId}?semesterId=${filters.semesterId}&academicYear=${encodeURIComponent(filters.academicYear)}`}

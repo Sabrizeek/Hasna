@@ -124,7 +124,7 @@ const HoDLecturerDetail = () => {
                   return (
                     <article key={type} className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
                       <p className="text-sm font-semibold uppercase tracking-[0.2em] text-amber-700">{type}</p>
-                      <p className="mt-4 text-4xl font-bold text-slate-950">{summary.averageScore}</p>
+                      <p className="mt-4 text-4xl font-bold text-slate-950">{summary.averageScore != null ? `${summary.averageScore}%` : "-"}</p>
                       <p className="mt-2 text-sm text-slate-600">{summary.totalResponses} anonymous responses</p>
                     </article>
                   );

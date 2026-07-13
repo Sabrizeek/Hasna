@@ -17,8 +17,7 @@ const Sidebar = () => {
         <NavLink to="/admin/dashboard" className={linkClass}>Dashboard</NavLink>
         <NavLink to="/admin/users" className={linkClass}>User Management</NavLink>
         <NavLink to="/admin/departments" className={linkClass}>Departments</NavLink>
-        <NavLink to="/admin/courses" className={linkClass}>Courses</NavLink>
-        <NavLink to="/admin/module-assignments" className={linkClass}>Module Assignments</NavLink>
+        <NavLink to="/admin/modules" className={linkClass}>Module Management</NavLink>
         <NavLink to="/admin/award-scores" className={linkClass}>Awards & Scores</NavLink>
         <NavLink to="/admin/semesters" className={linkClass}>Semesters</NavLink>
         <NavLink to="/admin/evaluation-windows" className={linkClass}>Evaluation Windows</NavLink>

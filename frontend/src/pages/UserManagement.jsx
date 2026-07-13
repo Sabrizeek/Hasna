@@ -7,8 +7,9 @@ const UserManagement = () => {
   const [departments, setDepartments] = useState([]);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
-  const [formData, setFormData] = useState({ universityId: "", fullName: "", email: "", role: "student", departmentId: "", phone: "" });
+  const [formData, setFormData] = useState({ universityId: "", fullName: "", email: "", role: "student", departmentId: "", departmentIds: [], phone: "" });
   const [resetRequests, setResetRequests] = useState([]);
+  const [resetSearch, setResetSearch] = useState("");
   const [editingId, setEditingId] = useState(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -31,7 +32,11 @@ const UserManagement = () => {
     setUsers(usersRes.data.users || []);
     setDepartments(loadedDepartments);
     setResetRequests(resetRequestsRes.data.requests || []);
-    setFormData((current) => ({ ...current, departmentId: current.departmentId || String(loadedDepartments[0]?.id || "") }));
+    setFormData((current) => ({ 
+      ...current, 
+      departmentId: current.departmentId || String(loadedDepartments[0]?.id || ""),
+      departmentIds: current.departmentIds?.length ? current.departmentIds : [String(loadedDepartments[0]?.id || "")]
+    }));
   };
 
   useEffect(() => {
@@ -45,6 +50,12 @@ const UserManagement = () => {
       return matchesSearch && matchesRole;
     });
   }, [users, search, roleFilter]);
+
+  const filteredResetRequests = useMemo(() => {
+    return resetRequests.filter((r) =>
+      `${r.universityId} ${r.fullName} ${r.email}`.toLowerCase().includes(resetSearch.toLowerCase())
+    );
+  }, [resetRequests, resetSearch]);
 
   const deleteUser = async (user) => {
     const confirmed = window.confirm(
@@ -67,9 +78,14 @@ const UserManagement = () => {
     setFormData((current) => ({ ...current, [event.target.name]: event.target.value }));
   };
 
+  const handleMultiSelectChange = (event) => {
+    const options = Array.from(event.target.selectedOptions, option => option.value);
+    setFormData((current) => ({ ...current, departmentIds: options }));
+  };
+
   const resetForm = () => {
     setEditingId(null);
-    setFormData({ universityId: "", fullName: "", email: "", role: "student", departmentId: String(departments[0]?.id || ""), phone: "", status: "approved" });
+    setFormData({ universityId: "", fullName: "", email: "", role: "student", departmentId: String(departments[0]?.id || ""), departmentIds: [String(departments[0]?.id || "")], phone: "", status: "approved" });
   };
 
   const emailStatusText = (emailStatus) => {
@@ -107,6 +123,7 @@ const UserManagement = () => {
       email: user.email || "",
       role: user.role || "student",
       departmentId: String(user.department_id || departments[0]?.id || ""),
+      departmentIds: user.departmentIds ? user.departmentIds.map(String) : [String(user.department_id || departments[0]?.id || "")],
       phone: user.phone || "",
       status: user.status || "approved",
     });
@@ -219,9 +236,38 @@ const UserManagement = () => {
             <option value="dean">Dean</option>
             <option value="admin">Admin</option>
           </select>
-          <select name="departmentId" value={formData.departmentId} onChange={handleChange} disabled={formData.role === "admin"} className="rounded-2xl border border-slate-300 px-4 py-3 disabled:bg-slate-100">
-            {departments.map((department) => <option key={department.id} value={department.id}>{department.department_name}</option>)}
-          </select>
+          {formData.role === "student" ? (
+            <details className="group relative">
+              <summary className="list-none [&::-webkit-details-marker]:hidden rounded-2xl border border-slate-300 px-4 py-3 bg-white flex justify-between items-center cursor-pointer focus:outline-none focus:border-brandBlue select-none">
+                <span className="truncate text-slate-700">
+                  {formData.departmentIds?.length ? `${formData.departmentIds.length} Departments Selected` : "Select Departments"}
+                </span>
+                <svg className="w-4 h-4 text-slate-400 group-open:rotate-180 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" /></svg>
+              </summary>
+              <div className="absolute top-full left-0 mt-2 w-full bg-white border border-slate-200 rounded-2xl shadow-xl z-50 max-h-56 overflow-y-auto p-2 scrollbar-thin scrollbar-thumb-slate-200">
+                {departments.map((department) => (
+                  <label key={department.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 cursor-pointer transition-colors">
+                    <input
+                      type="checkbox"
+                      className="w-4 h-4 text-brandBlue border-slate-300 rounded focus:ring-brandBlue cursor-pointer"
+                      checked={(formData.departmentIds || []).includes(String(department.id))}
+                      onChange={(e) => {
+                        const newIds = e.target.checked 
+                          ? [...(formData.departmentIds || []), String(department.id)]
+                          : (formData.departmentIds || []).filter(id => id !== String(department.id));
+                        setFormData(prev => ({ ...prev, departmentIds: newIds }));
+                      }}
+                    />
+                    <span className="text-sm font-medium text-slate-700 select-none">{department.department_name}</span>
+                  </label>
+                ))}
+              </div>
+            </details>
+          ) : (
+            <select name="departmentId" value={formData.departmentId} onChange={handleChange} disabled={formData.role === "admin"} className="rounded-2xl border border-slate-300 px-4 py-3 disabled:bg-slate-100">
+              {departments.map((department) => <option key={department.id} value={department.id}>{department.department_name}</option>)}
+            </select>
+          )}
           <input name="phone" value={formData.phone} onChange={handleChange} placeholder="Phone optional" className="rounded-2xl border border-slate-300 px-4 py-3" />
           {editingId && (
             <select name="status" value={formData.status || "approved"} onChange={handleChange} className="rounded-2xl border border-slate-300 px-4 py-3">
@@ -237,15 +283,20 @@ const UserManagement = () => {
         </div>
       </form>
 
-      <section className="mb-6 rounded-3xl border border-amber-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-amber-700">Admin Review</p>
-            <h3 className="mt-2 text-xl font-bold text-brandBlue">Password Reset Requests</h3>
+      <section className="mb-6 rounded-3xl border border-amber-200 bg-white p-6 shadow-sm flex flex-col">
+        <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <h3 className="text-xl font-bold text-brandBlue">Password Reset Requests</h3>
+            <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">{filteredResetRequests.length} pending</span>
           </div>
-          <span className="rounded-full bg-amber-50 px-4 py-2 text-sm font-bold text-amber-700">{resetRequests.length} pending</span>
+          <input 
+            placeholder="Search requests..." 
+            value={resetSearch}
+            onChange={(e) => setResetSearch(e.target.value)}
+            className="rounded-2xl border border-slate-300 px-4 py-2 text-sm outline-none transition focus:border-brandBlue w-full sm:w-64"
+          />
         </div>
-        <div className="mt-5 max-h-72 overflow-y-auto overflow-x-auto">
+        <div className="max-h-72 overflow-y-auto overflow-x-auto">
           <table className="w-full table-fixed divide-y divide-slate-200 text-left text-sm [&_td]:break-words [&_th]:break-words min-w-[800px]">
             <thead className="sticky top-0 z-10 bg-white">
               <tr className="text-slate-500">
@@ -259,9 +310,9 @@ const UserManagement = () => {
               </tr>
             </thead>
             <tbody>
-              {resetRequests.length === 0 ? (
-                <tr><td colSpan="7" className="py-5 text-slate-600">No pending password reset requests.</td></tr>
-              ) : resetRequests.map((request) => (
+              {filteredResetRequests.length === 0 ? (
+                <tr><td colSpan="7" className="py-5 text-slate-600">No pending password reset requests matching criteria.</td></tr>
+              ) : filteredResetRequests.map((request) => (
                 <tr key={request.id} className="border-t border-slate-100">
                   <td className="py-4 pr-4 font-semibold text-brandBlue">#{request.id}</td>
                   <td className="py-4 pr-4">{request.universityId}</td>
@@ -364,18 +415,24 @@ const UserManagement = () => {
         </form>
       </section>
 
-      <div className="mb-6 grid gap-4 md:grid-cols-2">
-        <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search users..." className="rounded-2xl border border-slate-300 px-4 py-3" />
-        <select value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)} className="rounded-2xl border border-slate-300 px-4 py-3">
-          <option value="all">All Roles</option>
-          <option value="student">Student</option>
-          <option value="lecturer">Lecturer</option>
-          <option value="admin">Admin</option>
-          <option value="hod">HoD</option>
-          <option value="dean">Dean</option>
-        </select>
-      </div>
-      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col">
+        <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <h3 className="text-xl font-bold text-brandBlue">Active Users</h3>
+            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">{filteredUsers.length} users</span>
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search users..." className="rounded-2xl border border-slate-300 px-4 py-2 text-sm outline-none transition focus:border-brandBlue w-full sm:w-64" />
+            <select value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)} className="rounded-2xl border border-slate-300 px-4 py-2 text-sm outline-none transition focus:border-brandBlue w-full sm:w-auto">
+              <option value="all">All Roles</option>
+              <option value="student">Student</option>
+              <option value="lecturer">Lecturer</option>
+              <option value="admin">Admin</option>
+              <option value="hod">HoD</option>
+              <option value="dean">Dean</option>
+            </select>
+          </div>
+        </div>
         <div className="max-h-[36rem] overflow-y-auto overflow-x-auto">
           <table className="w-full table-fixed divide-y divide-slate-200 text-left text-sm [&_td]:break-words [&_th]:break-words min-w-[1000px]">
             <thead className="sticky top-0 z-10 bg-white">
@@ -399,7 +456,11 @@ const UserManagement = () => {
                   <td className="py-4 pr-4 text-slate-600">{user.email}</td>
                   <td className="py-4 pr-4 text-slate-600">{user.phone || "-"}</td>
                   <td className="py-4 pr-4 capitalize text-slate-600">{user.role}</td>
-                  <td className="py-4 pr-4 text-slate-600">{user.department_name}</td>
+                  <td className="py-4 pr-4 text-slate-600">
+                    {user.role === 'student' && user.departmentNames?.length 
+                      ? user.departmentNames.join(", ") 
+                      : user.department_name}
+                  </td>
                   <td className="py-4 pr-4">
                     <span className={`inline-block whitespace-nowrap rounded-full px-3 py-1 text-xs font-bold capitalize ${
                       user.status === "approved"

@@ -173,7 +173,7 @@ const AdminAwardScores = () => {
 
         <div className="mt-6 rounded-2xl border border-amber-100 bg-amber-50 p-5 text-sm leading-7 text-amber-900">
           Formula for {selectedSemester ? `${selectedSemester.semester_name} - ${selectedSemester.academic_year}` : "the selected semester"}:
-          <span className="font-semibold"> Evaluation Score = average student overall grade x 20.</span>
+          <span className="font-semibold"> Evaluation Score = average student overall percentage.</span>
           <span className="font-semibold"> Final Score = Evaluation Score + Supervision Score.</span>
           Maximum final score is 200.
         </div>

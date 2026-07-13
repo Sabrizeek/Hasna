@@ -10,8 +10,7 @@ import AdminDashboard from "./pages/AdminDashboard.jsx";
 import PendingUsers from "./pages/PendingUsers.jsx";
 import UserManagement from "./pages/UserManagement.jsx";
 import DepartmentManagement from "./pages/DepartmentManagement.jsx";
-import CourseManagement from "./pages/CourseManagement.jsx";
-import ModuleAssignmentManagement from "./pages/ModuleAssignmentManagement.jsx";
+import ModuleManagement from "./pages/ModuleManagement.jsx";
 import AdminAwardScores from "./pages/AdminAwardScores.jsx";
 import SemesterManagement from "./pages/SemesterManagement.jsx";
 import EvaluationWindowManagement from "./pages/EvaluationWindowManagement.jsx";
@@ -20,9 +19,9 @@ import AdminReportsAudit from "./pages/AdminReportsAudit.jsx";
 import StudentDashboard from "./pages/StudentDashboard.jsx";
 import LecturerSelection from "./pages/LecturerSelection.jsx";
 import LecturerProfile from "./pages/LecturerProfile.jsx";
-import EvaluationTypeSelection from "./pages/EvaluationTypeSelection.jsx";
-import TheoryQuestionnaire from "./pages/TheoryQuestionnaire.jsx";
-import PracticalQuestionnaire from "./pages/PracticalQuestionnaire.jsx";
+import EvaluationHub from "./pages/EvaluationHub.jsx";
+import StudentModuleRegistration from "./pages/StudentModuleRegistration.jsx";
+
 import EvaluationThankYou from "./pages/EvaluationThankYou.jsx";
 import LecturerDashboard from "./pages/LecturerDashboard.jsx";
 import LecturerEvaluationResults from "./pages/LecturerEvaluationResults.jsx";
@@ -51,8 +50,7 @@ const App = () => {
         <Route path="/admin/pending-users" element={<PendingUsers />} />
         <Route path="/admin/users" element={<UserManagement />} />
         <Route path="/admin/departments" element={<DepartmentManagement />} />
-        <Route path="/admin/courses" element={<CourseManagement />} />
-        <Route path="/admin/module-assignments" element={<ModuleAssignmentManagement />} />
+        <Route path="/admin/modules" element={<ModuleManagement />} />
         <Route path="/admin/award-scores" element={<AdminAwardScores />} />
         <Route path="/admin/semesters" element={<SemesterManagement />} />
         <Route path="/admin/evaluation-windows" element={<EvaluationWindowManagement />} />
@@ -64,11 +62,9 @@ const App = () => {
 
       <Route element={<ProtectedRoute roles={["student"]} />}>
         <Route path="/student/dashboard" element={<StudentDashboard />} />
-        <Route path="/student/courses/:courseId/lecturers" element={<LecturerSelection />} />
-        <Route path="/student/lecturers/:lecturerId/profile" element={<LecturerProfile />} />
-        <Route path="/student/evaluation-type" element={<EvaluationTypeSelection />} />
-        <Route path="/student/questionnaire/theory" element={<TheoryQuestionnaire />} />
-        <Route path="/student/questionnaire/practical" element={<PracticalQuestionnaire />} />
+        <Route path="/student/evaluation-hub" element={<EvaluationHub />} />
+        <Route path="/student/modules" element={<StudentModuleRegistration />} />
+
         <Route path="/student/evaluation/thank-you" element={<EvaluationThankYou />} />
         <Route path="/student/profile" element={<ProfileSettings />} />
       </Route>
