@@ -144,8 +144,19 @@ export const getEvaluationResults = async (req, res) => {
 
       for (const row of responseRows) {
         const distribution = questionDistributions.get(row.question_id);
-        if (distribution && distribution[row.score] !== undefined) {
-          distribution[row.score] = Number(row.count);
+        if (distribution && row.score !== undefined) {
+          // Map 10-point scale down to 5-point scale if necessary
+          let mappedScore = Number(row.score);
+          if (mappedScore > 5) {
+             if (mappedScore >= 9) mappedScore = 5;
+             else if (mappedScore >= 7) mappedScore = 4;
+             else if (mappedScore >= 5) mappedScore = 3;
+             else if (mappedScore >= 3) mappedScore = 2;
+             else mappedScore = 1;
+          }
+          if (distribution[mappedScore] !== undefined) {
+            distribution[mappedScore] += Number(row.count);
+          }
         }
       }
     }
@@ -249,6 +260,7 @@ export const getSupervisionReports = async (req, res) => {
   try {
     const [reports] = await query(
       `SELECT id, title, file_name, file_type, file_size, status,
+              report_type, other_category,
               admin_comment, reviewed_at, submitted_at
        FROM supervision_reports
        WHERE lecturer_id = ?
@@ -265,6 +277,8 @@ export const getSupervisionReports = async (req, res) => {
 export const uploadSupervisionReport = async (req, res) => {
   try {
     const title = req.body.title?.trim();
+    const reportType = req.body.reportType?.trim() || 'supervision';
+    const otherCategory = req.body.otherCategory?.trim() || null;
 
     if (!title) {
       if (req.file?.path) {
@@ -281,9 +295,9 @@ export const uploadSupervisionReport = async (req, res) => {
 
     const [result] = await query(
       `INSERT INTO supervision_reports
-       (lecturer_id, title, file_name, file_path, file_type, file_size, status)
-       VALUES (?, ?, ?, ?, ?, ?, 'submitted')`,
-      [req.user.id, title, req.file.originalname, relativePath, req.file.mimetype, req.file.size]
+       (lecturer_id, title, file_name, file_path, file_type, file_size, report_type, other_category, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'submitted')`,
+      [req.user.id, title, req.file.originalname, relativePath, req.file.mimetype, req.file.size, reportType, otherCategory]
     );
 
     await notifyAdmins({

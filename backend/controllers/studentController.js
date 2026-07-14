@@ -8,7 +8,7 @@ const parsePositiveInt = (value) => {
 
 const parseScore = (value) => {
   const parsed = Number(value);
-  return Number.isInteger(parsed) && parsed >= 1 && parsed <= 10 ? parsed : null;
+  return Number.isInteger(parsed) && parsed >= 1 && parsed <= 5 ? parsed : null;
 };
 
 const getOpenEvaluationWindow = async (semesterId, academicYear) => {
@@ -221,7 +221,6 @@ export const createStudentSubmission = async (req, res) => {
     const academicYear = req.body.academicYear?.trim();
     const type = req.body.type?.trim();
     const responses = Array.isArray(req.body.responses) ? req.body.responses : [];
-    const overallGrade = parseScore(req.body.overallGrade);
     const comment = req.body.comment?.trim();
 
     if (!lecturerId || !courseId || !semesterId || !academicYear || !type) {
@@ -241,9 +240,7 @@ export const createStudentSubmission = async (req, res) => {
       return res.status(400).json({ message: "Exactly 10 question responses are required." });
     }
 
-    if (!overallGrade) {
-      return res.status(400).json({ message: "Overall grade is required." });
-    }
+
 
     if (!comment) {
       return res.status(400).json({ message: "Comment is required." });
@@ -255,8 +252,11 @@ export const createStudentSubmission = async (req, res) => {
     }));
 
     if (normalizedResponses.some((response) => !response.questionId || !response.score)) {
-      return res.status(400).json({ message: "Every response must include a valid question and score from 1 to 10." });
+      return res.status(400).json({ message: "Every response must include a valid question and score from 1 to 5." });
     }
+
+    const totalScore = normalizedResponses.reduce((sum, r) => sum + r.score, 0);
+    const overallGrade = (totalScore / (normalizedResponses.length * 5)) * 100;
 
     const uniqueQuestionIds = [...new Set(normalizedResponses.map((response) => response.questionId))];
     if (uniqueQuestionIds.length !== 10) {
@@ -522,11 +522,11 @@ export const createBulkSubmissions = async (req, res) => {
       }));
 
       if (normalizedResponses.some((r) => !r.questionId || !r.score)) {
-        throw new Error("Every response must include a valid question and score from 1 to 10.");
+        throw new Error("Every response must include a valid question and score from 1 to 5.");
       }
 
       const totalScore = normalizedResponses.reduce((sum, r) => sum + r.score, 0);
-      const overallGrade = (totalScore / (normalizedResponses.length * 10)) * 100;
+      const overallGrade = (totalScore / (normalizedResponses.length * 5)) * 100;
 
       // STRICT VALIDATION: Check if student is actually enrolled in this course for this semester
       const [enrollmentCheck] = await connection.execute(
@@ -576,7 +576,7 @@ export const createBulkSubmissions = async (req, res) => {
       const responseParams = responses.flatMap((r) => [
         submissionResult.insertId,
         parsePositiveInt(r.questionId),
-        parsePositiveInt(r.score), // 1-10 scale
+        parsePositiveInt(r.score), // 1-5 scale
       ]);
 
       await connection.execute(

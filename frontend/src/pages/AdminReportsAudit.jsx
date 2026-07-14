@@ -26,16 +26,6 @@ const AdminReportsAudit = () => {
   const [selectedEvaluation, setSelectedEvaluation] = useState(null);
   const [evaluationError, setEvaluationError] = useState("");
   const [auditFilters, setAuditFilters] = useState({ search: "", from: "", to: "" });
-  const [reportSearch, setReportSearch] = useState("");
-  const [reportStatusFilter, setReportStatusFilter] = useState("all");
-
-  const filteredReports = useMemo(() => {
-    return reports.filter(r => {
-      const matchesSearch = `${r.lecturer_name} ${r.department_name} ${r.title}`.toLowerCase().includes(reportSearch.toLowerCase());
-      const matchesStatus = reportStatusFilter === "all" || r.status === reportStatusFilter;
-      return matchesSearch && matchesStatus;
-    });
-  }, [reports, reportSearch, reportStatusFilter]);
 
   const formatAuditAction = (action) =>
     String(action || "")
@@ -131,16 +121,6 @@ const AdminReportsAudit = () => {
     ]);
   };
 
-  const handleDownloadReportsCSV = () => {
-    downloadCSV(filteredReports, "supervision_reports.csv", [
-      { header: "Title", key: "title" },
-      { header: "Lecturer", key: "lecturer_name" },
-      { header: "Department", key: "department_name" },
-      { header: "Status", key: "status" },
-      { header: "Submitted", key: (row) => new Date(row.submitted_at).toLocaleDateString() }
-    ]);
-  };
-
   const handleDownloadLogsCSV = () => {
     downloadCSV(logs, "audit_logs.csv", [
       { header: "Timestamp", key: (row) => new Date(row.created_at).toLocaleString() },
@@ -154,24 +134,6 @@ const AdminReportsAudit = () => {
   const openEvaluationDetail = async (evaluation) => {
     const response = await api.get(`/admin/evaluations/${evaluation.submissionId}`);
     setSelectedEvaluation(response.data.evaluation);
-    loadLogs();
-  };
-
-  const downloadReport = async (report) => {
-    const response = await api.get(`/admin/supervision-reports/${report.id}/download`, { responseType: "blob" });
-    const url = URL.createObjectURL(response.data);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = report.file_name;
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
-  };
-
-  const updateReportStatus = async (report, status) => {
-    await api.patch(`/admin/supervision-reports/${report.id}/status`, { status });
-    loadData();
     loadLogs();
   };
 
@@ -246,52 +208,6 @@ const AdminReportsAudit = () => {
               ))}
               {evaluations.length === 0 && (
                 <tr><td colSpan="10" className="py-6 text-center text-slate-500">No evaluation records match the current filters.</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <div className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col">
-        <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <h3 className="text-xl font-bold text-brandBlue">Supervision Report Inbox</h3>
-            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">{filteredReports.length} reports</span>
-          </div>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <input 
-              placeholder="Search reports..." 
-              value={reportSearch}
-              onChange={(e) => setReportSearch(e.target.value)}
-              className="rounded-2xl border border-slate-300 px-4 py-2 text-sm outline-none transition focus:border-brandBlue w-full sm:w-64"
-            />
-            <select
-              value={reportStatusFilter}
-              onChange={(e) => setReportStatusFilter(e.target.value)}
-              className="rounded-2xl border border-slate-300 px-4 py-2 text-sm outline-none transition focus:border-brandBlue w-full sm:w-auto"
-            >
-              <option value="all">All Statuses</option>
-              <option value="submitted">Submitted</option>
-              <option value="under_review">Under Review</option>
-              <option value="accepted">Accepted</option>
-              <option value="rejected">Rejected</option>
-            </select>
-            <button onClick={handleDownloadReportsCSV} className="rounded-2xl bg-brandGold px-4 py-2 text-sm font-semibold text-white">Export CSV</button>
-          </div>
-        </div>
-        <div className="max-h-[28rem] overflow-y-auto overflow-x-hidden">
-          <table className="w-full table-fixed text-left text-sm [&_td]:break-words [&_th]:break-words">
-            <thead className="sticky top-0 z-10 bg-white text-slate-500"><tr><th className="py-3 pr-4">Lecturer</th><th className="py-3 pr-4">Department</th><th className="py-3 pr-4">Report Title</th><th className="py-3 pr-4">Submitted</th><th className="py-3 pr-4">Status</th><th className="py-3 pr-4">Action</th></tr></thead>
-            <tbody>
-              {filteredReports.map((report) => (
-                <tr key={report.id} className="border-t border-slate-100">
-                  <td className="py-4 pr-4">{report.lecturer_name}</td><td className="py-4 pr-4">{report.department_name}</td><td className="py-4 pr-4 font-semibold">{report.title}</td><td className="py-4 pr-4">{new Date(report.submitted_at).toLocaleDateString()}</td>
-                  <td className="py-4 pr-4"><select value={report.status} onChange={(e) => updateReportStatus(report, e.target.value)} className="rounded-xl border border-slate-300 px-3 py-2"><option value="submitted">submitted</option><option value="under_review">under_review</option><option value="accepted">accepted</option><option value="rejected">rejected</option></select></td>
-                  <td className="py-4 pr-4 whitespace-nowrap"><button onClick={() => downloadReport(report)} className="rounded-full border border-brandBlue px-4 py-2 text-xs font-semibold text-brandBlue">View/Download</button></td>
-                </tr>
-              ))}
-              {filteredReports.length === 0 && (
-                <tr><td colSpan="6" className="py-6 text-center text-slate-500">No reports match the current filters.</td></tr>
               )}
             </tbody>
           </table>

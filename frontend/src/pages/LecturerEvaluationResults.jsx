@@ -7,18 +7,13 @@ import LecturerLayout from "../components/LecturerLayout.jsx";
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
-const scores = [10, 9, 8, 7, 6, 5, 4, 3, 2, 1];
+const scores = [5, 4, 3, 2, 1];
 const scoreLabels = {
-  10: "Exceptional",
-  9: "Outstanding",
-  8: "Excellent",
-  7: "Very Good",
-  6: "Good",
-  5: "Satisfactory",
-  4: "Adequate",
-  3: "Needs Improvement",
-  2: "Poor",
-  1: "Unacceptable",
+  5: "Strongly Agree",
+  4: "Agree",
+  3: "Average",
+  2: "Disagree",
+  1: "Strongly Disagree",
 };
 const chartColors = [
   "#064e3b", "#0f766e", "#0369a1", "#0284c7", "#1d4ed8", 
@@ -109,54 +104,7 @@ const LecturerEvaluationResults = () => {
     loadResults();
   }, [courseId, filters.academicYear, filters.semesterId, filters.type]);
 
-  const overallPercentages = useMemo(() => {
-    if (!results || !results.overallGradeDistribution) {
-      return {};
-    }
 
-    const total = results.totalResponses || 0;
-    const dist = results.overallGradeDistribution;
-    return Object.keys(dist).reduce((acc, bucket) => {
-      acc[bucket] = total > 0 ? Number(((dist[bucket] / total) * 100).toFixed(1)) : 0;
-      return acc;
-    }, {});
-  }, [results]);
-
-  const buildOverallChartData = (distribution) => {
-    const buckets = ["90-100%", "80-89%", "70-79%", "60-69%", "<60%"];
-    const colors = ["#0f766e", "#0284c7", "#f59e0b", "#f97316", "#dc2626"];
-    return {
-      labels: buckets,
-      datasets: [
-        {
-          data: buckets.map((b) => distribution?.[b] || 0),
-          backgroundColor: colors,
-          borderColor: "#ffffff",
-          borderWidth: 2,
-        },
-      ],
-    };
-  };
-
-  const OverallDistributionLegend = ({ distribution, percentages }) => {
-    const buckets = ["90-100%", "80-89%", "70-79%", "60-69%", "<60%"];
-    const colors = ["#0f766e", "#0284c7", "#f59e0b", "#f97316", "#dc2626"];
-    return (
-      <div className="space-y-2">
-        {buckets.map((bucket, index) => (
-          <div key={bucket} className="flex items-center justify-between gap-3 text-xs">
-            <div className="flex min-w-0 items-center gap-2">
-              <span className="h-3 w-3 rounded-full" style={{ backgroundColor: colors[index] }} />
-              <span className="truncate font-semibold text-slate-700">{bucket}</span>
-            </div>
-            <span className="font-bold text-slate-950">
-              {distribution?.[bucket] || 0} ({percentages?.[bucket] || 0}%)
-            </span>
-          </div>
-        ))}
-      </div>
-    );
-  };
 
   const handleTypeChange = (type) => {
     const nextParams = new URLSearchParams(searchParams);
@@ -246,34 +194,24 @@ const LecturerEvaluationResults = () => {
               <>
                 <div className="mt-8 max-h-[44rem] overflow-y-auto pr-2">
                   <div className="grid gap-5 xl:grid-cols-2">
-                    {results.questions.map((question) => (
+                    {results.questions.map((question) => {
+                      const hasData = scores.some(score => question.distribution?.[score] > 0);
+                      return (
                       <article key={question.questionId} className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
                         <p className="text-sm font-bold text-sky-700">{question.label}</p>
                         <h3 className="mt-2 min-h-16 text-sm font-semibold leading-7 text-slate-900">{question.questionText}</h3>
                         <div className="mt-5 grid gap-5 sm:grid-cols-[180px_1fr] sm:items-center">
-                          <div className="h-44">
-                            <Pie data={buildChartData(question.distribution)} options={chartOptions} />
+                          <div className="h-44 flex items-center justify-center">
+                            {hasData ? (
+                              <Pie data={buildChartData(question.distribution)} options={chartOptions} />
+                            ) : (
+                              <div className="text-sm text-slate-400 font-semibold text-center bg-slate-100 p-8 rounded-full h-40 w-40 flex items-center justify-center">No Data</div>
+                            )}
                           </div>
                           <DistributionLegend distribution={question.distribution} percentages={question.percentages} />
                         </div>
                       </article>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="mt-8 rounded-3xl border border-slate-200 bg-slate-50 p-5">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-xl font-bold text-slate-950">Overall Grade Distribution</h3>
-                    <div className="text-right">
-                      <p className="text-sm font-semibold text-slate-500">Average Overall</p>
-                      <p className="text-2xl font-bold text-sky-700">{results.averageOverallGrade}%</p>
-                    </div>
-                  </div>
-                  <div className="mt-5 grid gap-5 md:grid-cols-[220px_1fr] md:items-center">
-                    <div className="h-56">
-                      <Pie data={buildOverallChartData(results.overallGradeDistribution)} options={chartOptions} />
-                    </div>
-                    <OverallDistributionLegend distribution={results.overallGradeDistribution} percentages={overallPercentages} />
+                    )})}
                   </div>
                 </div>
 

@@ -14,6 +14,8 @@ const AdminPeerEvaluations = () => {
   const [searchUploads, setSearchUploads] = useState("");
   
   const [editingGroup, setEditingGroup] = useState(null);
+  const [peerScores, setPeerScores] = useState({});
+  const [editingScore, setEditingScore] = useState({});
 
   const [formData, setFormData] = useState({
     semesterId: "",
@@ -68,6 +70,37 @@ const AdminPeerEvaluations = () => {
     } catch (err) {
       setError(err.response?.data?.message || "Unable to update status.");
     }
+  };
+
+  const handleScoreChange = (groupKey, value) => {
+    setPeerScores(prev => ({ ...prev, [groupKey]: value }));
+  };
+
+  const savePeerEvaluationScore = async (group) => {
+    try {
+      const score = peerScores[group.key] !== undefined ? peerScores[group.key] : group.peer_evaluation_score;
+      if (score === null || score === undefined || score === "") {
+        alert("Please enter a valid score.");
+        return;
+      }
+      
+      const payload = {
+        semesterId: group.semester_id,
+        academicYear: group.academic_year,
+        peerEvaluationScore: score
+      };
+
+      await api.patch(`/admin/award-scores/${group.evaluated_id}`, payload);
+      alert("Peer evaluation score saved successfully!");
+      setEditingScore(prev => ({ ...prev, [group.key]: false }));
+      await loadData();
+    } catch (err) {
+      alert(err.response?.data?.message || "Failed to save peer evaluation score.");
+    }
+  };
+
+  const toggleEditScore = (groupKey) => {
+    setEditingScore(prev => ({ ...prev, [groupKey]: !prev[groupKey] }));
   };
 
   const handleAssign = async (event) => {
@@ -182,6 +215,9 @@ const AdminPeerEvaluations = () => {
     if (!acc[key]) {
       acc[key] = {
         key,
+        evaluated_id: curr.evaluated_id,
+        semester_id: curr.semester_id,
+        peer_evaluation_score: curr.peer_evaluation_score,
         evaluated_name: curr.evaluated_name,
         semester_name: curr.semester_name,
         academic_year: curr.academic_year,
@@ -467,6 +503,52 @@ const AdminPeerEvaluations = () => {
                           </td>
                         </tr>
                       ))}
+                      {group.submissions.length === 2 && group.submissions.every(s => s.status === 'accepted') && (
+                        <tr className="border-b-4 border-slate-200 bg-sky-50/50">
+                          <td colSpan="6" className="py-4 px-4">
+                            <div className="flex items-center justify-end gap-3">
+                              <span className="text-sm font-semibold text-slate-700">Peer Evaluation Score:</span>
+                              {!editingScore[group.key] && group.peer_evaluation_score !== null ? (
+                                <>
+                                  <span className="text-lg font-bold text-brandBlue">{group.peer_evaluation_score}</span>
+                                  <button
+                                    onClick={() => toggleEditScore(group.key)}
+                                    className="ml-2 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-100"
+                                  >
+                                    Edit
+                                  </button>
+                                </>
+                              ) : (
+                                <>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    max="100"
+                                    className="w-24 rounded-lg border border-slate-300 px-3 py-1.5 text-sm outline-none transition focus:border-brandBlue"
+                                    placeholder="0-100"
+                                    value={peerScores[group.key] !== undefined ? peerScores[group.key] : (group.peer_evaluation_score || "")}
+                                    onChange={(e) => handleScoreChange(group.key, e.target.value)}
+                                  />
+                                  <button
+                                    onClick={() => savePeerEvaluationScore(group)}
+                                    className="rounded-lg bg-brandBlue px-4 py-1.5 text-sm font-semibold text-white transition hover:bg-blue-800"
+                                  >
+                                    {group.peer_evaluation_score !== null ? "Update Score" : "Save Score"}
+                                  </button>
+                                  {group.peer_evaluation_score !== null && (
+                                    <button
+                                      onClick={() => toggleEditScore(group.key)}
+                                      className="rounded-lg text-slate-500 px-3 py-1.5 text-sm font-semibold hover:text-slate-700"
+                                    >
+                                      Cancel
+                                    </button>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
                     </Fragment>
                   ))
                 )}

@@ -7,6 +7,7 @@ import {
   getDepartmentOverview,
   getHodSemesters,
   getHodLecturerDetails,
+  downloadHodPeerEvaluation,
 } from "../controllers/hodController.js";
 
 const router = Router();
@@ -18,5 +19,6 @@ router.get("/semesters", getHodSemesters);
 router.get("/lecturer/:lecturerId/details", getHodLecturerDetails);
 router.get("/export/department-report", exportDepartmentReport);
 router.get("/supervision-reports/:reportId/download", downloadHodSupervisionReport);
+router.get("/peer-evaluations/:reportId/download", downloadHodPeerEvaluation);
 
 export default router;

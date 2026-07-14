@@ -32,8 +32,15 @@ export const createCourse = async (req, res) => {
     const courseId = result.insertId;
 
     if (Array.isArray(assignments)) {
+      const uniqueAssignments = new Set();
       for (const assignment of assignments) {
         if (!assignment.lecturerId) continue;
+        if (uniqueAssignments.has(assignment.lecturerId)) {
+          await connection.rollback();
+          return res.status(400).json({ message: "Duplicate lecturer assignments found. Each lecturer can only be assigned once per module." });
+        }
+        uniqueAssignments.add(assignment.lecturerId);
+        
         const type = determineAssignmentType(assignment.typeTheory, assignment.typePractical);
         await connection.execute(
           "INSERT INTO lecturer_modules (lecturer_id, course_id, semester_id, academic_year, type) VALUES (?, ?, ?, ?, ?)",
@@ -127,9 +134,16 @@ export const updateCourse = async (req, res) => {
       // Clear existing assignments for this course
       await connection.execute("DELETE FROM lecturer_modules WHERE course_id = ?", [id]);
       
+      const uniqueAssignments = new Set();
       // Insert new ones
       for (const assignment of assignments) {
         if (!assignment.lecturerId) continue;
+        if (uniqueAssignments.has(assignment.lecturerId)) {
+          await connection.rollback();
+          return res.status(400).json({ message: "Duplicate lecturer assignments found. Each lecturer can only be assigned once per module." });
+        }
+        uniqueAssignments.add(assignment.lecturerId);
+        
         const type = determineAssignmentType(assignment.typeTheory, assignment.typePractical);
         await connection.execute(
           "INSERT INTO lecturer_modules (lecturer_id, course_id, semester_id, academic_year, type) VALUES (?, ?, ?, ?, ?)",

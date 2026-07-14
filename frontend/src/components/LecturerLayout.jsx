@@ -7,7 +7,7 @@ import SiteFooter from "./SiteFooter.jsx";
 const navItems = [
   { key: "dashboard", label: "Dashboard", to: "/lecturer/dashboard" },
   { key: "evaluations", label: "My Evaluations", to: "/lecturer/dashboard#evaluations" },
-  { key: "reports", label: "Supervision Reports", to: "/lecturer/supervision-reports" },
+  { key: "reports", label: "Activity Reports", to: "/lecturer/supervision-reports" },
   { key: "peer", label: "Peer Evaluations", to: "/lecturer/peer-evaluations" },
 ];
 

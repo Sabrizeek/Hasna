@@ -25,9 +25,10 @@ import StudentModuleRegistration from "./pages/StudentModuleRegistration.jsx";
 import EvaluationThankYou from "./pages/EvaluationThankYou.jsx";
 import LecturerDashboard from "./pages/LecturerDashboard.jsx";
 import LecturerEvaluationResults from "./pages/LecturerEvaluationResults.jsx";
-import LecturerSupervisionReports from "./pages/LecturerSupervisionReports.jsx";
+import LecturerActivityReports from "./pages/LecturerActivityReports.jsx";
 import LecturerPeerEvaluations from "./pages/LecturerPeerEvaluations.jsx";
 import AdminPeerEvaluations from "./pages/AdminPeerEvaluations.jsx";
+import AdminActivityReports from "./pages/AdminActivityReports.jsx";
 import HoDDashboard from "./pages/HoDDashboard.jsx";
 import HoDLecturerDetail from "./pages/HoDLecturerDetail.jsx";
 import DeanDashboard from "./pages/DeanDashboard.jsx";
@@ -57,6 +58,7 @@ const App = () => {
         <Route path="/admin/announcements" element={<AnnouncementManagement />} />
         <Route path="/admin/reports-audit" element={<AdminReportsAudit />} />
         <Route path="/admin/peer-evaluations" element={<AdminPeerEvaluations />} />
+        <Route path="/admin/activity-reports" element={<AdminActivityReports />} />
         <Route path="/admin/profile" element={<ProfileSettings />} />
       </Route>
 
@@ -72,7 +74,7 @@ const App = () => {
       <Route element={<ProtectedRoute roles={["lecturer"]} />}>
         <Route path="/lecturer/dashboard" element={<LecturerDashboard />} />
         <Route path="/lecturer/evaluation-results/:courseId" element={<LecturerEvaluationResults />} />
-        <Route path="/lecturer/supervision-reports" element={<LecturerSupervisionReports />} />
+        <Route path="/lecturer/supervision-reports" element={<LecturerActivityReports />} />
         <Route path="/lecturer/peer-evaluations" element={<LecturerPeerEvaluations />} />
         <Route path="/lecturer/profile" element={<ProfileSettings />} />
       </Route>

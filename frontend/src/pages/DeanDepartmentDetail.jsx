@@ -141,14 +141,18 @@ const DeanDepartmentDetail = () => {
         </div>
 
         <div className="mt-8 overflow-hidden rounded-3xl border border-slate-200">
-          <div className="max-h-[32rem] overflow-y-auto overflow-x-hidden">
+          <div className="max-h-[32rem] overflow-auto">
             <table className="w-full table-fixed text-left text-sm [&_td]:break-words [&_th]:break-words">
               <thead className="sticky top-0 z-10 bg-slate-900 text-white">
                 <tr>
-                  <th className="px-5 py-4 font-semibold">Lecturer Name</th>
+                  <th className="px-5 py-4 font-semibold">Name</th>
                   <th className="px-5 py-4 font-semibold">Department</th>
-                  <th className="px-5 py-4 font-semibold">Theory Score</th>
-                  <th className="px-5 py-4 font-semibold">Practical Score</th>
+                  <th className="px-5 py-4 font-semibold">Student Eval Score</th>
+                  <th className="px-5 py-4 font-semibold">Peer Eval Score</th>
+                  <th className="px-5 py-4 font-semibold">Mentoring</th>
+                  <th className="px-5 py-4 font-semibold">Supervision</th>
+                  <th className="px-5 py-4 font-semibold">Other</th>
+                  <th className="px-5 py-4 font-semibold">Total Evals</th>
                   <th className="px-5 py-4 font-semibold">Overall Score</th>
                   <th className="w-32 px-5 py-4 font-semibold">Action</th>
                 </tr>
@@ -158,9 +162,13 @@ const DeanDepartmentDetail = () => {
                   <tr key={lecturer.lecturerId} className="border-t border-slate-100">
                     <td className="px-5 py-4 font-semibold text-slate-950">{lecturer.name}</td>
                     <td className="px-5 py-4 text-slate-600">{lecturer.department}</td>
-                    <td className="px-5 py-4 text-slate-600">{lecturer.theoryScore ? `${lecturer.theoryScore}%` : "-"}</td>
-                    <td className="px-5 py-4 text-slate-600">{lecturer.practicalScore ? `${lecturer.practicalScore}%` : "-"}</td>
-                    <td className="px-5 py-4 font-bold text-orange-700">{lecturer.overallScore ? `${lecturer.overallScore}%` : "-"}</td>
+                    <td className="px-5 py-4 text-slate-600">{lecturer.studentEvaluationScore ? `${lecturer.studentEvaluationScore}%` : "-"}</td>
+                    <td className="px-5 py-4 font-bold text-orange-700">{lecturer.peerEvaluationScore ? `${lecturer.peerEvaluationScore}` : "-"}</td>
+                    <td className="px-5 py-4 text-slate-600">{lecturer.mentoringScore ? `${lecturer.mentoringScore}` : "-"}</td>
+                    <td className="px-5 py-4 text-slate-600">{lecturer.supervisionScore ? `${lecturer.supervisionScore}` : "-"}</td>
+                    <td className="px-5 py-4 text-slate-600">{lecturer.otherScore ? `${lecturer.otherScore}` : "-"}</td>
+                    <td className="px-5 py-4 text-slate-600">{lecturer.totalEvaluations}</td>
+                    <td className="px-5 py-4 font-bold text-brandBlue">{lecturer.overallScore ? `${lecturer.overallScore}%` : "-"}</td>
                     <td className="w-32 px-5 py-4 whitespace-nowrap">
                       <Link
                         to={`/dean/lecturers/${lecturer.lecturerId}?semesterId=${filters.semesterId}&academicYear=${encodeURIComponent(filters.academicYear)}`}

@@ -16,11 +16,17 @@ const EvaluationHub = () => {
   const [practicalQuestions, setPracticalQuestions] = useState([]);
   
   // State: { "lecturerId-courseId-type": { responses: { qId: score }, comment: "" } }
-  const [formState, setFormState] = useState({});
+  const [formState, setFormState] = useState(() => {
+    const saved = sessionStorage.getItem("eval_formState");
+    return saved ? JSON.parse(saved) : {};
+  });
 
   // Stepper State
-  const [activeTab, setActiveTab] = useState("theory");
-  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [activeTab, setActiveTab] = useState(() => sessionStorage.getItem("eval_activeTab") || "theory");
+  const [currentStepIndex, setCurrentStepIndex] = useState(() => {
+    const saved = sessionStorage.getItem("eval_currentStepIndex");
+    return saved ? parseInt(saved, 10) : 0;
+  });
 
   const selection = useMemo(() => {
     return {
@@ -70,8 +76,21 @@ const EvaluationHub = () => {
         });
         
         setAllLecturers(flatLecturers);
+        
+        const savedFormState = sessionStorage.getItem("eval_formState");
+        if (savedFormState) {
+          try {
+            const parsed = JSON.parse(savedFormState);
+            Object.keys(initialState).forEach(key => {
+              if (parsed[key]) initialState[key] = parsed[key];
+            });
+          } catch(e) {}
+        }
         setFormState(initialState);
-        setActiveTab(hasTheory ? "theory" : "practical");
+        
+        if (!sessionStorage.getItem("eval_activeTab") && !hasTheory) {
+          setActiveTab("practical");
+        }
       } catch (error) {
         setServerError(error.response?.data?.message || "Failed to load evaluation data.");
       } finally {
@@ -137,6 +156,20 @@ const EvaluationHub = () => {
     return true;
   };
 
+  useEffect(() => {
+    if (Object.keys(formState).length > 0) {
+      sessionStorage.setItem("eval_formState", JSON.stringify(formState));
+    }
+  }, [formState]);
+
+  useEffect(() => {
+    sessionStorage.setItem("eval_activeTab", activeTab);
+  }, [activeTab]);
+
+  useEffect(() => {
+    sessionStorage.setItem("eval_currentStepIndex", currentStepIndex.toString());
+  }, [currentStepIndex]);
+
   const handleSubmit = async () => {
     if (!isFormComplete()) {
       setServerError("Please complete all ratings and comments before submitting.");
@@ -163,7 +196,7 @@ const EvaluationHub = () => {
       
       questions.forEach(q => { 
         totalScore += (row.responses[q.id] || 0); 
-        totalMax += 10; 
+        totalMax += 5; 
       });
       
       const overallPercentage = totalMax > 0 ? (totalScore / totalMax) * 100 : 0;
@@ -184,6 +217,9 @@ const EvaluationHub = () => {
         academicYear: selection.academicYear,
         submissions
       });
+      sessionStorage.removeItem("eval_formState");
+      sessionStorage.removeItem("eval_activeTab");
+      sessionStorage.removeItem("eval_currentStepIndex");
       navigate("/student/evaluation/thank-you", { replace: true });
     } catch (error) {
       setServerError(error.response?.data?.message || "Unable to submit evaluations.");
@@ -203,10 +239,9 @@ const EvaluationHub = () => {
     <StudentLayout>
       <section className="rounded-3xl border border-teal-100 bg-white p-6 shadow-sm sm:p-8">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-teal-600">Evaluation Hub</p>
-            <h2 className="mt-3 text-3xl font-bold text-slate-950">Module & Lecturer Evaluation</h2>
-            <p className="mt-2 text-sm text-slate-600">Rate the lecturers for your selected modules on a scale of 1-10.</p>
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold text-teal-900">Module Evaluation</h2>
+            <p className="mt-2 text-sm text-slate-600">Please indicate your response by checking the appropriate box according to the following scale.<br /> <span className="font-semibold text-brandBlue">5. Strongly Agree &nbsp; 4. Agree &nbsp; 3. Average &nbsp; 2. Disagree &nbsp; 1. Strongly Disagree</span></p>
           </div>
           <Link
             to="/student/dashboard"
@@ -279,8 +314,8 @@ const EvaluationHub = () => {
                         <tr>
                           <th className="p-4 font-semibold min-w-[200px] border-r border-slate-200">Lecturer Name</th>
                           <th className="p-4 font-semibold min-w-[120px] border-r border-slate-200">Course Code</th>
-                          {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
-                            <th key={num} className="p-4 font-bold text-center border-r border-slate-200 text-teal-800 w-12">{num}</th>
+                          {[5, 4, 3, 2, 1].map(num => (
+                            <th key={num} className="p-4 font-bold text-center border-r border-slate-200 text-teal-800 w-16 sm:w-20">{num}</th>
                           ))}
                         </tr>
                       </thead>
@@ -294,20 +329,20 @@ const EvaluationHub = () => {
                             <tr key={rowKey} className="hover:bg-slate-50 transition border-b border-slate-100 last:border-b-0">
                               <td className="p-4 font-medium text-slate-900 border-r border-slate-200 bg-white sticky left-0 z-10">{l.lecturer_name}</td>
                               <td className="p-4 text-slate-600 border-r border-slate-200">{l.course_code}</td>
-                              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => {
+                              {[5, 4, 3, 2, 1].map(num => {
                                 const isSelected = row.responses[qId] === num;
                                 return (
                                   <td 
                                     key={num} 
-                                    className="p-2 border-r border-slate-200 text-center cursor-pointer hover:bg-teal-50/50" 
+                                    className="p-3 border-r border-slate-200 text-center cursor-pointer hover:bg-teal-50 transition-colors" 
                                     onClick={() => handleResponseChange(rowKey, qId, num)}
                                   >
                                     {isSelected ? (
-                                      <div className="mx-auto w-6 h-6 flex items-center justify-center bg-teal-100 text-teal-600 rounded shadow-sm">
-                                        <svg className="w-4 h-4 font-bold" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                                      <div className="mx-auto w-8 h-8 flex items-center justify-center bg-teal-600 text-white rounded shadow-sm scale-110 transition-transform">
+                                        <svg className="w-5 h-5 font-bold" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
                                       </div>
                                     ) : (
-                                      <div className="mx-auto w-6 h-6 rounded hover:bg-slate-200 transition-colors"></div>
+                                      <div className="mx-auto w-8 h-8 rounded border-2 border-slate-300 hover:border-teal-400 bg-white shadow-sm transition-all"></div>
                                     )}
                                   </td>
                                 );
@@ -377,7 +412,8 @@ const EvaluationHub = () => {
               {!isCommentsStep ? (
                 <button 
                   onClick={() => setCurrentStepIndex(prev => prev + 1)}
-                  className="px-8 py-3 bg-teal-600 text-white rounded-xl font-bold hover:bg-teal-700 shadow-sm transition-colors"
+                  disabled={!currentLecturers.every(l => formState[`${l.lecturer_id}-${l.course_id}-${l.evalType}`]?.responses?.[currentQuestions[currentStepIndex]?.id] !== undefined)}
+                  className="px-8 py-3 bg-teal-600 text-white rounded-xl font-bold hover:bg-teal-700 shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-teal-600"
                 >
                   Next Question
                 </button>

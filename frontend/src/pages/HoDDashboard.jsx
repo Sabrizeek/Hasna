@@ -191,17 +191,20 @@ const HoDDashboard = () => {
         </div>
 
         <div className="mt-8 overflow-hidden rounded-3xl border border-slate-200">
-          <div className="max-h-[32rem] overflow-y-auto overflow-x-hidden">
+          <div className="max-h-[32rem] overflow-auto">
             <table className="w-full table-fixed text-left text-sm [&_td]:break-words [&_th]:break-words">
               <thead className="sticky top-0 z-10 bg-slate-900 text-white">
                 <tr>
                   {[
                     ["name", "Name"],
                     ["modules", "Module(s)"],
-                    ["theoryScore", "Theory Score"],
-                    ["practicalScore", "Practical Score"],
-                    ["overallScore", "Overall Score"],
+                    ["studentEvaluationScore", "Student Eval Score"],
+                    ["peerEvaluationScore", "Peer Eval Score"],
+                    ["mentoringScore", "Mentoring"],
+                    ["supervisionScore", "Supervision"],
+                    ["otherScore", "Other"],
                     ["reportsSubmitted", "Reports Submitted"],
+                    ["overallScore", "Overall Score"],
                   ].map(([key, label]) => (
                     <th key={key} className="px-5 py-4 font-semibold">
                       <button type="button" onClick={() => handleSort(key)}>{label}</button>
@@ -215,10 +218,13 @@ const HoDDashboard = () => {
                   <tr key={lecturer.lecturerId} className="border-t border-slate-100">
                     <td className="px-5 py-4 font-semibold text-slate-950">{lecturer.name}</td>
                     <td className="px-5 py-4 text-slate-600">{lecturer.modules.join(", ") || "No modules"}</td>
-                    <td className="px-5 py-4 text-slate-600">{lecturer.theoryScore ? `${lecturer.theoryScore}%` : "-"}</td>
-                    <td className="px-5 py-4 text-slate-600">{lecturer.practicalScore ? `${lecturer.practicalScore}%` : "-"}</td>
-                    <td className="px-5 py-4 font-bold text-amber-700">{lecturer.overallScore ? `${lecturer.overallScore}%` : "-"}</td>
+                    <td className="px-5 py-4 text-slate-600">{lecturer.studentEvaluationScore ? `${lecturer.studentEvaluationScore}%` : "-"}</td>
+                    <td className="px-5 py-4 font-bold text-brandBlue">{lecturer.peerEvaluationScore ? `${lecturer.peerEvaluationScore}` : "-"}</td>
+                    <td className="px-5 py-4 text-slate-600">{lecturer.mentoringScore ? `${lecturer.mentoringScore}` : "-"}</td>
+                    <td className="px-5 py-4 text-slate-600">{lecturer.supervisionScore ? `${lecturer.supervisionScore}` : "-"}</td>
+                    <td className="px-5 py-4 text-slate-600">{lecturer.otherScore ? `${lecturer.otherScore}` : "-"}</td>
                     <td className="px-5 py-4 text-slate-600">{lecturer.reportsSubmitted}</td>
+                    <td className="px-5 py-4 font-bold text-amber-700">{lecturer.overallScore ? `${lecturer.overallScore}%` : "-"}</td>
                     <td className="w-40 px-5 py-4 whitespace-nowrap">
                       <Link
                         to={`/hod/lecturers/${lecturer.lecturerId}?semesterId=${filters.semesterId}&academicYear=${encodeURIComponent(filters.academicYear)}`}

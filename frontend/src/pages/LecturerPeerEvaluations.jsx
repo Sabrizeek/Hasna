@@ -4,9 +4,7 @@ import LecturerLayout from "../components/LecturerLayout.jsx";
 
 const maxFileSize = 10 * 1024 * 1024;
 const allowedTypes = [
-  "application/pdf",
-  "image/jpeg",
-  "image/png",
+  "application/pdf"
 ];
 
 const statusStyles = {
@@ -57,7 +55,7 @@ const LecturerPeerEvaluations = () => {
     }
 
     if (!allowedTypes.includes(nextFile.type)) {
-      setError("Only PDF, JPG, and PNG files are allowed.");
+      setError("Only PDF files are allowed.");
       return;
     }
 
@@ -75,7 +73,7 @@ const LecturerPeerEvaluations = () => {
 
     const file = files[assignmentId];
     if (!file) {
-      setError("Please select a valid PDF, JPG, or PNG file.");
+      setError("Please select a valid PDF file.");
       return;
     }
 
@@ -125,10 +123,20 @@ const LecturerPeerEvaluations = () => {
   return (
     <LecturerLayout>
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-[0.24em] text-sky-700">Peer Evaluations</p>
-          <h2 className="mt-3 text-3xl font-bold text-slate-950">Upload Scanned Peer Evaluations</h2>
-          <p className="mt-2 text-sm text-slate-600">Please complete the paper-based evaluation, scan it, and upload it here.</p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-sky-700">Peer Evaluations</p>
+            <h2 className="mt-3 text-3xl font-bold text-slate-950">Upload Scanned Peer Evaluations</h2>
+            <p className="mt-2 text-sm text-slate-600">Please download the template, complete the paper-based evaluation, scan it as a PDF, and upload it here.</p>
+          </div>
+          <a
+            href="/Peer_Evaluation_Form.pdf"
+            download="Peer_Evaluation_Form.pdf"
+            className="flex w-fit items-center gap-2 rounded-xl bg-slate-900 px-5 py-2.5 font-semibold text-white shadow-sm transition-colors hover:bg-slate-800"
+          >
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+            Download Template
+          </a>
         </div>
 
         {message && <p className="mt-6 rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">{message}</p>}
@@ -198,7 +206,7 @@ const LecturerPeerEvaluations = () => {
                           <div className="flex flex-col gap-2">
                             <input
                               type="file"
-                              accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                              accept=".pdf,application/pdf"
                               onChange={(e) => handleFileChange(assignment.assignment_id, e)}
                               className="w-full text-xs file:mr-2 file:cursor-pointer file:rounded-full file:border-0 file:bg-sky-50 file:px-3 file:py-1 file:font-semibold file:text-sky-700"
                             />

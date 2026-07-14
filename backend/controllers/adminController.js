@@ -356,7 +356,7 @@ export const updateUser = async (req, res) => {
 export const deactivateUser = async (req, res) => {
   try {
     const id = parsePositiveInt(req.params.id);
-    const [result] = await query("UPDATE users SET status = 'rejected' WHERE id = ? AND deleted_at IS NULL", [id]);
+    const [result] = await query("UPDATE users SET status = 'inactive' WHERE id = ? AND deleted_at IS NULL", [id]);
     if (result.affectedRows === 0) return res.status(404).json({ message: "User not found." });
     await logAudit({ userId: req.user.id, action: "user_deactivated", entityType: "user", entityId: id });
     res.json({ message: "User deactivated successfully." });
@@ -459,9 +459,9 @@ export const getDashboardStats = async (req, res) => {
     await syncEvaluationWindowStatuses();
     const [[students], [lecturers], [hods], [submissions], [windows], [pendingReports], [recentReports], [recentActivity]] =
       await Promise.all([
-        query("SELECT COUNT(*) AS count FROM users WHERE role = 'student'"),
-        query("SELECT COUNT(*) AS count FROM users WHERE role = 'lecturer'"),
-        query("SELECT COUNT(*) AS count FROM users WHERE role = 'hod'"),
+        query("SELECT COUNT(*) AS count FROM users WHERE role = 'student' AND deleted_at IS NULL"),
+        query("SELECT COUNT(*) AS count FROM users WHERE role = 'lecturer' AND deleted_at IS NULL"),
+        query("SELECT COUNT(*) AS count FROM users WHERE role = 'hod' AND deleted_at IS NULL"),
         query("SELECT COUNT(*) AS count FROM evaluation_submissions"),
         query("SELECT COUNT(*) AS count FROM evaluation_windows WHERE status = 'open' AND open_date <= NOW() AND close_date > NOW()"),
         query("SELECT COUNT(*) AS count FROM supervision_reports WHERE status IN ('submitted', 'under_review')"),
@@ -700,11 +700,12 @@ const validateWindow = async ({ semesterId, academicYear, openDate, closeDate, e
   const [rows] = await query(
     `SELECT id FROM evaluation_windows
      WHERE semester_id = ?
+       AND status != 'closed'
        ${exclude}
      LIMIT 1`,
     params
   );
-  return rows.length ? "An evaluation window already exists for this semester. Please edit or reopen the existing one instead." : null;
+  return rows.length ? "An active evaluation window already exists for this semester. Please edit or reopen the existing one instead." : null;
 };
 
 export const createEvaluationWindow = async (req, res) => {
@@ -934,7 +935,7 @@ export const updateSupervisionReportStatus = async (req, res) => {
       await notifyUser({
         userId: reports[0].lecturer_id,
         title: "Supervision Report Updated",
-        message: `Your supervision report "${reports[0].title}" status has been updated to ${status}.`,
+        message: `Your supervision report "${reports[0].title}" status has been updated to ${status.replace("_", " ")}.${adminComment ? `\n\nAdmin Comment: ${adminComment}` : ""}`,
         type: status === "accepted" ? "success" : status === "rejected" ? "error" : "info",
         relatedEntityType: "supervision_report",
         relatedEntityId: id,
@@ -1165,6 +1166,9 @@ export const getLecturerAwardScores = async (req, res) => {
               COUNT(DISTINCT sr.id) AS reportsSubmitted,
               COUNT(DISTINCT CASE WHEN sr.status = 'accepted' THEN sr.id END) AS acceptedReports,
               COALESCE(MAX(las.supervision_score), 0) AS supervisionScore,
+              COALESCE(MAX(las.mentoring_score), 0) AS mentoringScore,
+              COALESCE(MAX(las.other_score), 0) AS otherScore,
+              COALESCE(MAX(las.peer_evaluation_score), 0) AS peerEvaluationScore,
               MAX(las.admin_comment) AS adminComment,
               MAX(las.updated_at) AS scoreUpdatedAt
        FROM users u
@@ -1174,14 +1178,30 @@ export const getLecturerAwardScores = async (req, res) => {
        LEFT JOIN lecturer_award_scores las ON las.lecturer_id = u.id ${scoreJoinFilter}
        ${where}
        GROUP BY u.id, u.full_name, u.email, d.department_name
-       ORDER BY (COALESCE(AVG(es.overall_grade), 0) + COALESCE(MAX(las.supervision_score), 0)) DESC, u.full_name ASC`,
+       ORDER BY (
+         COALESCE(AVG(es.overall_grade), 0) * 0.50 +
+         COALESCE(MAX(las.peer_evaluation_score), 0) * 0.20 +
+         COALESCE(MAX(las.mentoring_score), 0) * 0.15 +
+         COALESCE(MAX(las.supervision_score), 0) * 0.10 +
+         COALESCE(MAX(las.other_score), 0) * 0.05
+       ) DESC, u.full_name ASC`,
       [...evalParams, ...reportParams, ...scoreParams, ...params]
     );
 
     const lecturers = rows.map((row, index) => {
       const evaluationAverage = Number(row.evaluationAverage || 0);
-      const evaluationScore = Number(evaluationAverage.toFixed(2));
+      const peerScore = Number(row.peerEvaluationScore || 0);
       const supervisionScore = Number(row.supervisionScore || 0);
+      const mentoringScore = Number(row.mentoringScore || 0);
+      const otherScore = Number(row.otherScore || 0);
+      // Correct weighted formula: 50/20/15/10/5
+      const finalScore = Number((
+        evaluationAverage * 0.50 +
+        peerScore * 0.20 +
+        mentoringScore * 0.15 +
+        supervisionScore * 0.10 +
+        otherScore * 0.05
+      ).toFixed(2));
       return {
         rank: index + 1,
         lecturerId: row.lecturerId,
@@ -1190,21 +1210,27 @@ export const getLecturerAwardScores = async (req, res) => {
         departmentName: row.departmentName,
         evaluationCount: Number(row.evaluationCount || 0),
         evaluationAverage: Number(evaluationAverage.toFixed(2)),
-        evaluationScore,
+        evaluationScore: Number(evaluationAverage.toFixed(2)),
         reportsSubmitted: Number(row.reportsSubmitted || 0),
         acceptedReports: Number(row.acceptedReports || 0),
+        peerEvaluationScore: peerScore,
         supervisionScore,
+        mentoringScore,
+        otherScore,
         adminComment: row.adminComment || "",
-        finalScore: Number((evaluationScore + supervisionScore).toFixed(2)),
+        finalScore,
         scoreUpdatedAt: row.scoreUpdatedAt,
       };
     });
 
     res.json({
       scale: {
-        evaluationScore: "Student evaluation average multiplied by 20. Read-only.",
-        supervisionScore: "Admin editable score from 0 to 100.",
-        finalScore: "Evaluation score plus supervision score. Maximum 200.",
+        evaluationScore: "Student evaluation average (50% weight).",
+        peerEvaluationScore: "Peer evaluation score (20% weight).",
+        mentoringScore: "Mentoring score (15% weight).",
+        supervisionScore: "Supervision score (10% weight).",
+        otherScore: "Other activities score (5% weight).",
+        finalScore: "Weighted overall score: Student(50%) + Peer(20%) + Mentoring(15%) + Supervision(10%) + Other(5%).",
       },
       lecturers,
     });
@@ -1218,24 +1244,54 @@ export const updateLecturerAwardScore = async (req, res) => {
     const lecturerId = parsePositiveInt(req.params.lecturerId);
     const semesterId = parsePositiveInt(req.body.semesterId);
     const academicYear = req.body.academicYear?.trim();
-    const supervisionScore = parseScore(req.body.supervisionScore);
+    const supervisionScore = req.body.supervisionScore !== undefined ? parseScore(req.body.supervisionScore) : null;
+    const mentoringScore = req.body.mentoringScore !== undefined ? parseScore(req.body.mentoringScore) : null;
+    const otherScore = req.body.otherScore !== undefined ? parseScore(req.body.otherScore) : null;
+    const peerEvaluationScore = req.body.peerEvaluationScore !== undefined && req.body.peerEvaluationScore !== null ? parseScore(req.body.peerEvaluationScore) : null;
     const adminComment = req.body.adminComment?.trim() || null;
 
-    if (!lecturerId || !semesterId || !academicYear || supervisionScore === null) {
-      return res.status(400).json({ message: "Lecturer, semester, academic year and supervision score from 0 to 100 are required." });
+    if (!lecturerId || !semesterId || !academicYear || (supervisionScore === null && mentoringScore === null && otherScore === null && peerEvaluationScore === null && adminComment === null)) {
+      return res.status(400).json({ message: "Lecturer, semester, academic year and at least one score from 0 to 100 are required." });
+    }
+
+    if (peerEvaluationScore !== null) {
+      const [peerEvals] = await query(
+        `SELECT p.status
+         FROM peer_evaluation_uploads p
+         INNER JOIN peer_evaluation_assignments a ON p.assignment_id = a.id
+         WHERE p.evaluated_id = ? AND a.semester_id = ?`,
+        [lecturerId, semesterId]
+      );
+      if (peerEvals.length !== 2 || peerEvals.some(pe => pe.status !== "accepted")) {
+        return res.status(400).json({ message: "Peer evaluation score can only be given when both peer evaluations are accepted." });
+      }
     }
 
     const [lecturers] = await query("SELECT id FROM users WHERE id = ? AND role = 'lecturer' LIMIT 1", [lecturerId]);
     if (lecturers.length === 0) return res.status(404).json({ message: "Lecturer not found." });
 
+    const [existing] = await query("SELECT * FROM lecturer_award_scores WHERE lecturer_id = ? AND semester_id = ? AND academic_year = ?", [lecturerId, semesterId, academicYear]);
+    const currentSupervision = existing.length > 0 ? existing[0].supervision_score : 0;
+    const currentMentoring = existing.length > 0 ? existing[0].mentoring_score : 0;
+    const currentOther = existing.length > 0 ? existing[0].other_score : 0;
+    const currentPeerEval = existing.length > 0 ? existing[0].peer_evaluation_score : null;
+
+    const newSupervision = supervisionScore !== null ? supervisionScore : currentSupervision;
+    const newMentoring = mentoringScore !== null ? mentoringScore : currentMentoring;
+    const newOther = otherScore !== null ? otherScore : currentOther;
+    const newPeerEval = peerEvaluationScore !== null ? peerEvaluationScore : currentPeerEval;
+
     const [result] = await query(
-      `INSERT INTO lecturer_award_scores (lecturer_id, semester_id, academic_year, supervision_score, admin_comment, updated_by)
-       VALUES (?, ?, ?, ?, ?, ?)
+      `INSERT INTO lecturer_award_scores (lecturer_id, semester_id, academic_year, supervision_score, mentoring_score, other_score, peer_evaluation_score, admin_comment, updated_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON DUPLICATE KEY UPDATE
          supervision_score = VALUES(supervision_score),
+         mentoring_score = VALUES(mentoring_score),
+         other_score = VALUES(other_score),
+         peer_evaluation_score = VALUES(peer_evaluation_score),
          admin_comment = VALUES(admin_comment),
          updated_by = VALUES(updated_by)`,
-      [lecturerId, semesterId, academicYear, supervisionScore, adminComment, req.user.id]
+      [lecturerId, semesterId, academicYear, newSupervision, newMentoring, newOther, newPeerEval, adminComment, req.user.id]
     );
 
     await logAudit({
@@ -1243,7 +1299,7 @@ export const updateLecturerAwardScore = async (req, res) => {
       action: "lecturer_award_score_updated",
       entityType: "lecturer_award_score",
       entityId: result.insertId || lecturerId,
-      details: { lecturerId, semesterId, academicYear, supervisionScore, adminComment },
+      details: { lecturerId, semesterId, academicYear, supervisionScore: newSupervision, mentoringScore: newMentoring, otherScore: newOther, adminComment },
     });
 
     res.json({ message: "Supervision award score saved successfully." });
@@ -1318,12 +1374,15 @@ export const getAdminPeerEvaluations = async (req, res) => {
     const [uploads] = await query(
       `SELECT p.id, p.file_name, p.file_path, p.file_type, p.file_size, p.status, p.submitted_at,
               u1.full_name AS evaluator_name, u2.full_name AS evaluated_name,
-              s.semester_name, a.academic_year
+              u2.id AS evaluated_id, s.id AS semester_id,
+              s.semester_name, a.academic_year,
+              las.peer_evaluation_score
        FROM peer_evaluation_uploads p
        INNER JOIN peer_evaluation_assignments a ON p.assignment_id = a.id
        INNER JOIN users u1 ON p.evaluator_id = u1.id
        INNER JOIN users u2 ON p.evaluated_id = u2.id
        INNER JOIN semesters s ON a.semester_id = s.id
+       LEFT JOIN lecturer_award_scores las ON las.lecturer_id = u2.id AND las.semester_id = s.id AND las.academic_year = a.academic_year
        ORDER BY p.submitted_at DESC`
     );
 
@@ -1370,9 +1429,12 @@ export const updatePeerEvaluationStatus = async (req, res) => {
       relatedEntityId: uploadId,
     });
 
-    logAudit(req.user.id, "update_peer_evaluation_status", "peer_evaluation_upload", uploadId, {
-      previousStatus,
-      newStatus: status,
+    await logAudit({
+      userId: req.user.id,
+      action: "update_peer_evaluation_status",
+      entityType: "peer_evaluation_upload",
+      entityId: uploadId,
+      details: { previousStatus, newStatus: status },
     });
 
     res.json({ message: "Status updated successfully." });
@@ -1454,10 +1516,12 @@ export const createPeerEvaluationAssignment = async (req, res) => {
       type: "info"
     });
 
-    logAudit(req.user.id, "create_peer_evaluation_assignment", "peer_evaluation_assignments", evaluatedId, {
-      evaluator1Id,
-      evaluator2Id,
-      semesterId,
+    await logAudit({
+      userId: req.user.id,
+      action: "create_peer_evaluation_assignment",
+      entityType: "peer_evaluation_assignments",
+      entityId: evaluatedId,
+      details: { evaluator1Id, evaluator2Id, semesterId },
     });
 
     res.status(201).json({ message: "Peer evaluation assignments created successfully." });
@@ -1510,7 +1574,13 @@ export const deletePeerEvaluationAssignment = async (req, res) => {
       });
     }
 
-    logAudit(req.user.id, "delete_peer_evaluation_assignment", "peer_evaluation_assignments", evaluatedId, { semesterId });
+    await logAudit({
+      userId: req.user.id,
+      action: "delete_peer_evaluation_assignment",
+      entityType: "peer_evaluation_assignments",
+      entityId: evaluatedId,
+      details: { semesterId },
+    });
 
     res.json({ message: "Assignments deleted successfully." });
   } catch (error) {
@@ -1574,7 +1644,13 @@ export const updatePeerEvaluationAssignment = async (req, res) => {
       }
     }
 
-    logAudit(req.user.id, "update_peer_evaluation_assignment", "peer_evaluation_assignments", evaluatedId, { evaluator1Id, evaluator2Id, semesterId });
+    await logAudit({
+      userId: req.user.id,
+      action: "update_peer_evaluation_assignment",
+      entityType: "peer_evaluation_assignments",
+      entityId: evaluatedId,
+      details: { evaluator1Id, evaluator2Id, semesterId },
+    });
 
     res.json({ message: "Assignments updated successfully." });
   } catch (error) {

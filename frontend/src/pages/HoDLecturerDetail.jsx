@@ -47,7 +47,13 @@ const HoDLecturerDetail = () => {
   }, [lecturerId, filters, isDeanView]);
 
   const downloadReport = async (report) => {
-    const response = await api.get(`/${isDeanView ? "dean" : "hod"}/supervision-reports/${report.id}/download`, { responseType: "blob" });
+    let urlPath = "";
+    if (report.isPeer) {
+      urlPath = `/${isDeanView ? "dean" : "hod"}/peer-evaluations/${report.id}/download`;
+    } else {
+      urlPath = `/${isDeanView ? "dean" : "hod"}/supervision-reports/${report.id}/download`;
+    }
+    const response = await api.get(urlPath, { responseType: "blob" });
     const url = URL.createObjectURL(response.data);
     const link = document.createElement("a");
     link.href = url;
@@ -106,30 +112,66 @@ const HoDLecturerDetail = () => {
                 onClick={() => setActiveTab("evaluations")}
                 className={`rounded-2xl px-5 py-3 text-sm font-semibold ${activeTab === "evaluations" ? "bg-amber-600 text-white" : "border border-slate-300 text-slate-700"}`}
               >
-                Evaluation Results
+                Performance Scores
               </button>
               <button
                 type="button"
-                onClick={() => setActiveTab("reports")}
-                className={`rounded-2xl px-5 py-3 text-sm font-semibold ${activeTab === "reports" ? "bg-amber-600 text-white" : "border border-slate-300 text-slate-700"}`}
+                onClick={() => setActiveTab("supervision")}
+                className={`rounded-2xl px-5 py-3 text-sm font-semibold ${activeTab === "supervision" ? "bg-amber-600 text-white" : "border border-slate-300 text-slate-700"}`}
               >
                 Supervision Reports
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("peer")}
+                className={`rounded-2xl px-5 py-3 text-sm font-semibold ${activeTab === "peer" ? "bg-amber-600 text-white" : "border border-slate-300 text-slate-700"}`}
+              >
+                Peer Evaluations
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("mentoring")}
+                className={`rounded-2xl px-5 py-3 text-sm font-semibold ${activeTab === "mentoring" ? "bg-amber-600 text-white" : "border border-slate-300 text-slate-700"}`}
+              >
+                Mentoring Reports
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("other")}
+                className={`rounded-2xl px-5 py-3 text-sm font-semibold ${activeTab === "other" ? "bg-amber-600 text-white" : "border border-slate-300 text-slate-700"}`}
+              >
+                Other Reports
               </button>
             </div>
 
             {activeTab === "evaluations" ? (
-              <div className="mt-6 grid gap-5 md:grid-cols-2">
-                {["theory", "practical"].map((type) => {
-                  const summary = details.evaluationSummaries[type];
-                  return (
-                    <article key={type} className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
-                      <p className="text-sm font-semibold uppercase tracking-[0.2em] text-amber-700">{type}</p>
-                      <p className="mt-4 text-4xl font-bold text-slate-950">{summary.averageScore != null ? `${summary.averageScore}%` : "-"}</p>
-                      <p className="mt-2 text-sm text-slate-600">{summary.totalResponses} anonymous responses</p>
-                    </article>
-                  );
-                })}
-                <div className="md:col-span-2 rounded-3xl border border-slate-200 bg-white p-5">
+              <div className="mt-6 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+                <article className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                  <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Student Eval</p>
+                  <p className="mt-4 text-4xl font-bold text-slate-950">{details.scores?.studentEvaluationScore != null ? `${details.scores.studentEvaluationScore}%` : "-"}</p>
+                  <p className="mt-2 text-sm text-slate-600">{details.scores?.totalResponses} total anonymous responses</p>
+                </article>
+                <article className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                  <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Peer Eval</p>
+                  <p className="mt-4 text-4xl font-bold text-slate-950">{details.scores?.peerEvaluationScore != null ? details.scores.peerEvaluationScore : "-"}</p>
+                </article>
+                <article className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                  <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Mentoring</p>
+                  <p className="mt-4 text-4xl font-bold text-slate-950">{details.scores?.mentoringScore != null ? details.scores.mentoringScore : "-"}</p>
+                </article>
+                <article className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                  <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Supervision</p>
+                  <p className="mt-4 text-4xl font-bold text-slate-950">{details.scores?.supervisionScore != null ? details.scores.supervisionScore : "-"}</p>
+                </article>
+                <article className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
+                  <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Other</p>
+                  <p className="mt-4 text-4xl font-bold text-slate-950">{details.scores?.otherScore != null ? details.scores.otherScore : "-"}</p>
+                </article>
+                <article className="rounded-3xl border-2 border-amber-400 bg-amber-50 p-5 shadow-sm">
+                  <p className="text-sm font-bold uppercase tracking-[0.2em] text-amber-700">Overall Score</p>
+                  <p className="mt-4 text-4xl font-bold text-amber-900">{details.scores?.overallScore != null ? `${details.scores.overallScore}%` : "-"}</p>
+                </article>
+                <div className="md:col-span-2 lg:col-span-3 rounded-3xl border border-slate-200 bg-white p-5">
                   <h3 className="text-lg font-bold text-slate-950">Assigned Modules</h3>
                   <div className="mt-4 grid gap-3 md:grid-cols-2">
                     {details.assignedModules.map((module) => (
@@ -139,6 +181,39 @@ const HoDLecturerDetail = () => {
                       </div>
                     ))}
                   </div>
+                </div>
+              </div>
+            ) : activeTab === "peer" ? (
+              <div className="mt-6 overflow-hidden rounded-3xl border border-slate-200">
+                <div className="max-h-[30rem] overflow-y-auto overflow-x-hidden">
+                <table className="w-full table-fixed text-left text-sm [&_td]:break-words [&_th]:break-words">
+                  <thead className="sticky top-0 z-10 bg-slate-900 text-white">
+                    <tr>
+                      <th className="px-5 py-4 font-semibold">Evaluator</th>
+                      <th className="px-5 py-4 font-semibold">File Name</th>
+                      <th className="px-5 py-4 font-semibold">Submitted Date</th>
+                      <th className="px-5 py-4 font-semibold">Status</th>
+                      <th className="px-5 py-4 font-semibold">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {!details.peerEvaluations || details.peerEvaluations.length === 0 ? (
+                      <tr><td colSpan="5" className="px-5 py-6 text-amber-700">No peer evaluations submitted yet.</td></tr>
+                    ) : details.peerEvaluations.map((report) => (
+                      <tr key={report.id} className="border-t border-slate-100">
+                        <td className="px-5 py-4 font-semibold text-slate-950">{report.evaluator_name}</td>
+                        <td className="px-5 py-4 text-slate-600">{report.file_name}</td>
+                        <td className="px-5 py-4 text-slate-600">{new Date(report.submitted_at).toLocaleDateString()}</td>
+                        <td className="px-5 py-4 capitalize text-slate-600">{report.status.replace("_", " ")}</td>
+                        <td className="px-5 py-4 whitespace-nowrap">
+                          <button onClick={() => downloadReport({...report, isPeer: true})} className="rounded-full border border-amber-200 px-4 py-2 text-xs font-semibold text-amber-700 hover:bg-amber-50">
+                            View/Download
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
                 </div>
               </div>
             ) : (
@@ -154,9 +229,9 @@ const HoDLecturerDetail = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {details.supervisionReports.length === 0 ? (
-                      <tr><td colSpan="4" className="px-5 py-6 text-amber-700">No supervision reports submitted.</td></tr>
-                    ) : details.supervisionReports.map((report) => (
+                    {details.supervisionReports.filter((report) => report.report_type === activeTab).length === 0 ? (
+                      <tr><td colSpan="4" className="px-5 py-6 text-amber-700">No {activeTab} reports submitted.</td></tr>
+                    ) : details.supervisionReports.filter((report) => report.report_type === activeTab).map((report) => (
                       <tr key={report.id} className="border-t border-slate-100">
                         <td className="px-5 py-4 font-semibold text-slate-950">{report.title}</td>
                         <td className="px-5 py-4 text-slate-600">{new Date(report.submitted_at).toLocaleDateString()}</td>

@@ -1,7 +1,7 @@
 import { query } from "../config/db.js";
 import fs from "fs";
 import path from "path";
-import { supervisionReportsUploadDir } from "../utils/uploadDirectories.js";
+import { supervisionReportsUploadDir, peerEvaluationsUploadDir } from "../utils/uploadDirectories.js";
 
 const parsePositiveInt = (value) => {
   const parsed = Number(value);
@@ -42,61 +42,120 @@ export const getDeanSemesters = async (req, res) => {
 export const getFacultyOverview = async (req, res) => {
   try {
     const filters = parseFilters(req);
-    const evalParams = [];
-    const evalConditions = buildEvalConditions(filters, evalParams);
-    const evalWhere = evalConditions.length ? `WHERE ${evalConditions.join(" AND ")}` : "";
+    const semId = filters.semesterId || null;
+    const acadYear = filters.academicYear || null;
+
+    // Build semester sub-query fragment for sub-selects
+    const subEvalWhere = semId ? "AND sub.semester_id = ?" : "";
+    const subLasWhere = semId ? "AND las2.semester_id = ?" : "";
 
     const [lecturerRows] = await query(
       "SELECT COUNT(*) AS totalLecturers FROM users WHERE role = 'lecturer' AND status = 'approved'"
     );
 
+    // Faculty average and total evaluations — sub-queries now respect semester filter
+    const facultySubParams = [];
+    if (semId) facultySubParams.push(semId, semId, semId, semId, semId);
+    if (semId) facultySubParams.push(semId); // for the outer es join
+    const evalOuterWhere = semId ? `AND es.semester_id = ?` : "";
+    const evalAcadWhere = acadYear ? `AND es.academic_year = ?` : "";
+    if (acadYear) facultySubParams.push(acadYear);
+
     const [evaluationRows] = await query(
-      `SELECT COUNT(*) AS totalEvaluations, AVG(overall_grade) AS facultyAverageScore
-       FROM evaluation_submissions es
-       ${evalWhere}`,
-      evalParams
+      `SELECT COUNT(DISTINCT es.id) AS totalEvaluations, 
+              ROUND(
+                AVG(
+                  (COALESCE((SELECT AVG(sub.overall_grade) FROM evaluation_submissions sub WHERE sub.lecturer_id = u.id ${subEvalWhere}), 0) * 0.50) +
+                  (COALESCE((SELECT MAX(las2.peer_evaluation_score) FROM lecturer_award_scores las2 WHERE las2.lecturer_id = u.id ${subLasWhere}), 0) * 0.20) +
+                  (COALESCE((SELECT MAX(las2.mentoring_score) FROM lecturer_award_scores las2 WHERE las2.lecturer_id = u.id ${subLasWhere}), 0) * 0.15) +
+                  (COALESCE((SELECT MAX(las2.supervision_score) FROM lecturer_award_scores las2 WHERE las2.lecturer_id = u.id ${subLasWhere}), 0) * 0.10) +
+                  (COALESCE((SELECT MAX(las2.other_score) FROM lecturer_award_scores las2 WHERE las2.lecturer_id = u.id ${subLasWhere}), 0) * 0.05)
+                ),
+                1
+              ) AS facultyAverageScore
+       FROM users u
+       LEFT JOIN evaluation_submissions es ON es.lecturer_id = u.id ${evalOuterWhere} ${evalAcadWhere}
+       WHERE u.role = 'lecturer' AND u.status = 'approved'`,
+      facultySubParams
     );
+
+    // departmentsEvaluated — how many departments have at least 1 evaluation in this period
+    const depEvParams = [];
+    const depEvCond = [];
+    if (semId) { depEvCond.push("es.semester_id = ?"); depEvParams.push(semId); }
+    if (acadYear) { depEvCond.push("es.academic_year = ?"); depEvParams.push(acadYear); }
+    const evalWhere = depEvCond.length ? `WHERE ${depEvCond.join(" AND ")}` : "";
 
     const [departmentRows] = await query(
       `SELECT COUNT(DISTINCT u.department_id) AS departmentsEvaluated
        FROM evaluation_submissions es
        INNER JOIN users u ON es.lecturer_id = u.id
        ${evalWhere}`,
-      evalParams
+      depEvParams
     );
 
-    const deptParams = [];
-    const deptConditions = buildEvalConditions(filters, deptParams);
-    const deptFilter = deptConditions.length ? `AND ${deptConditions.join(" AND ")}` : "";
+    // Per-department averages — all sub-queries also get semester filter
+    const deptSubParams = [];
+    if (semId) deptSubParams.push(semId, semId, semId, semId, semId);
+    if (semId) deptSubParams.push(semId); // outer es join
+    if (acadYear) deptSubParams.push(acadYear); // outer es join academic_year
+    const deptEsOuterWhere = semId ? `AND es.semester_id = ?` : "";
+    const deptEsAcadWhere = acadYear ? `AND es.academic_year = ?` : "";
+    // params are repeated per sub-select and then the outer join
+    const allDeptParams = [];
+    if (semId) allDeptParams.push(semId, semId, semId, semId, semId, semId);
+    if (acadYear) allDeptParams.push(acadYear);
 
     const [departmentAverages] = await query(
       `SELECT d.id AS departmentId, d.department_name AS departmentName,
-              AVG(es.overall_grade) AS averageScore,
-              COUNT(es.id) AS totalEvaluations
+              COUNT(es.id) AS totalEvaluations,
+              ROUND(
+                AVG(
+                  (COALESCE((SELECT AVG(sub.overall_grade) FROM evaluation_submissions sub WHERE sub.lecturer_id = u.id ${subEvalWhere}), 0) * 0.50) +
+                  (COALESCE((SELECT MAX(las2.peer_evaluation_score) FROM lecturer_award_scores las2 WHERE las2.lecturer_id = u.id ${subLasWhere}), 0) * 0.20) +
+                  (COALESCE((SELECT MAX(las2.mentoring_score) FROM lecturer_award_scores las2 WHERE las2.lecturer_id = u.id ${subLasWhere}), 0) * 0.15) +
+                  (COALESCE((SELECT MAX(las2.supervision_score) FROM lecturer_award_scores las2 WHERE las2.lecturer_id = u.id ${subLasWhere}), 0) * 0.10) +
+                  (COALESCE((SELECT MAX(las2.other_score) FROM lecturer_award_scores las2 WHERE las2.lecturer_id = u.id ${subLasWhere}), 0) * 0.05)
+                ),
+                1
+              ) AS averageScore
        FROM departments d
        LEFT JOIN users u ON u.department_id = d.id AND u.role = 'lecturer' AND u.status = 'approved'
-       LEFT JOIN evaluation_submissions es ON es.lecturer_id = u.id ${deptFilter}
+       LEFT JOIN evaluation_submissions es ON es.lecturer_id = u.id ${semId ? "AND es.semester_id = ?" : ""} ${acadYear ? "AND es.academic_year = ?" : ""}
        GROUP BY d.id, d.department_name
        ORDER BY averageScore DESC, d.department_name ASC`,
-      deptParams
+      allDeptParams
     );
 
-    const performerParams = [];
-    const performerConditions = buildEvalConditions(filters, performerParams);
-    const performerFilter = performerConditions.length ? `AND ${performerConditions.join(" AND ")}` : "";
+    // Top performers: also filter las by semester
+    const perfParams = [];
+    const perfEsWhere = semId ? `AND es.semester_id = ?` : "";
+    const perfEsAcadWhere = acadYear ? `AND es.academic_year = ?` : "";
+    const perfLasWhere = semId ? `AND las.semester_id = ?` : "";
+    if (semId) perfParams.push(semId);
+    if (acadYear) perfParams.push(acadYear);
+    if (semId) perfParams.push(semId);
 
     const [performerRows] = await query(
       `SELECT u.id AS lecturerId, u.full_name AS name, d.department_name AS departmentName,
-              AVG(es.overall_grade) AS averageScore,
-              COUNT(es.id) AS totalEvaluations
+              COUNT(es.id) AS totalEvaluations,
+              ROUND(
+                (COALESCE(AVG(es.overall_grade), 0) * 0.50) +
+                (COALESCE(MAX(las.peer_evaluation_score), 0) * 0.20) +
+                (COALESCE(MAX(las.mentoring_score), 0) * 0.15) +
+                (COALESCE(MAX(las.supervision_score), 0) * 0.10) +
+                (COALESCE(MAX(las.other_score), 0) * 0.05),
+                1
+              ) AS averageScore
        FROM users u
        INNER JOIN departments d ON u.department_id = d.id
-       LEFT JOIN evaluation_submissions es ON es.lecturer_id = u.id ${performerFilter}
+       LEFT JOIN evaluation_submissions es ON es.lecturer_id = u.id ${perfEsWhere} ${perfEsAcadWhere}
+       LEFT JOIN lecturer_award_scores las ON las.lecturer_id = u.id ${perfLasWhere}
        WHERE u.role = 'lecturer' AND u.status = 'approved'
        GROUP BY u.id, u.full_name, d.department_name
        HAVING totalEvaluations > 0
        ORDER BY averageScore DESC, u.full_name ASC`,
-      performerParams
+      perfParams
     );
 
     const normalizePerformer = (row) => ({
@@ -155,17 +214,28 @@ export const getDeanDepartment = async (req, res) => {
 
     const [lecturers] = await query(
       `SELECT u.id AS lecturerId, u.full_name AS name, d.department_name AS department,
-              AVG(CASE WHEN es.type = 'theory' THEN es.overall_grade END) AS theoryScore,
-              AVG(CASE WHEN es.type = 'practical' THEN es.overall_grade END) AS practicalScore,
-              AVG(es.overall_grade) AS overallScore,
-              COUNT(es.id) AS totalEvaluations
+              AVG(es.overall_grade) AS studentEvaluationScore,
+              ROUND(
+                (COALESCE(AVG(es.overall_grade), 0) * 0.50) +
+                (COALESCE(MAX(las.peer_evaluation_score), 0) * 0.20) +
+                (COALESCE(MAX(las.mentoring_score), 0) * 0.15) +
+                (COALESCE(MAX(las.supervision_score), 0) * 0.10) +
+                (COALESCE(MAX(las.other_score), 0) * 0.05),
+                1
+              ) AS overallScore,
+              COUNT(es.id) AS totalEvaluations,
+              MAX(las.supervision_score) AS supervisionScore,
+              MAX(las.mentoring_score) AS mentoringScore,
+              MAX(las.other_score) AS otherScore,
+              MAX(las.peer_evaluation_score) AS peerEvaluationScore
        FROM users u
        INNER JOIN departments d ON u.department_id = d.id
        LEFT JOIN evaluation_submissions es ON es.lecturer_id = u.id ${evalFilter}
+       LEFT JOIN lecturer_award_scores las ON las.lecturer_id = u.id ${filters.semesterId ? "AND las.semester_id = ?" : ""}
        WHERE u.department_id = ? AND u.role = 'lecturer' AND u.status = 'approved'
        GROUP BY u.id, u.full_name, d.department_name
        ORDER BY overallScore DESC, u.full_name ASC`,
-      [...evalParams, departmentId]
+      [...evalParams, ...(filters.semesterId ? [filters.semesterId] : []), departmentId]
     );
 
     res.json({
@@ -175,10 +245,13 @@ export const getDeanDepartment = async (req, res) => {
         lecturerId: lecturer.lecturerId,
         name: lecturer.name,
         department: lecturer.department,
-        theoryScore: formatAverage(lecturer.theoryScore),
-        practicalScore: formatAverage(lecturer.practicalScore),
+        studentEvaluationScore: formatAverage(lecturer.studentEvaluationScore),
         overallScore: formatAverage(lecturer.overallScore),
         totalEvaluations: Number(lecturer.totalEvaluations || 0),
+        supervisionScore: formatAverage(lecturer.supervisionScore),
+        mentoringScore: formatAverage(lecturer.mentoringScore),
+        otherScore: formatAverage(lecturer.otherScore),
+        peerEvaluationScore: formatAverage(lecturer.peerEvaluationScore),
       })),
     });
   } catch (error) {
@@ -210,64 +283,101 @@ export const getDeanLecturerDetails = async (req, res) => {
       return res.status(404).json({ message: "Lecturer not found." });
     }
 
-    const moduleConditions = ["c.lecturer_id = ?"];
     const moduleParams = [lecturerId];
+    let where1 = "";
+    let where2 = "";
     if (filters.semesterId) {
-      moduleConditions.push("c.semester_id = ?");
+      where1 += " AND lm.semester_id = ?";
+      where2 += " AND c.semester_id = ?";
       moduleParams.push(filters.semesterId);
     }
     if (filters.academicYear) {
-      moduleConditions.push("s.academic_year = ?");
+      where1 += " AND lm.academic_year = ?";
+      where2 += " AND s.academic_year = ?";
       moduleParams.push(filters.academicYear);
     }
 
     const [assignedModules] = await query(
       `SELECT c.id AS courseId, c.course_code, c.course_name, s.id AS semesterId,
               s.semester_name, s.academic_year
+       FROM lecturer_modules lm
+       INNER JOIN courses c ON lm.course_id = c.id
+       INNER JOIN semesters s ON lm.semester_id = s.id
+       WHERE lm.lecturer_id = ? ${where1}
+       
+       UNION
+       
+       SELECT c.id AS courseId, c.course_code, c.course_name, s.id AS semesterId,
+              s.semester_name, s.academic_year
        FROM courses c
        INNER JOIN semesters s ON c.semester_id = s.id
-       WHERE ${moduleConditions.join(" AND ")}
-       ORDER BY s.academic_year DESC, s.semester_name ASC, c.course_code ASC`,
-      moduleParams
+       WHERE c.lecturer_id = ? ${where2}
+       
+       ORDER BY academic_year DESC, semester_name ASC, course_code ASC`,
+      [...moduleParams, ...moduleParams]
     );
 
     const evalParams = [lecturerId];
     const evalConditions = ["es.lecturer_id = ?"];
     evalConditions.push(...buildEvalConditions(filters, evalParams));
 
-    const [summaryRows] = await query(
-      `SELECT es.type, COUNT(*) AS totalResponses, AVG(es.overall_grade) AS averageScore
-       FROM evaluation_submissions es
-       WHERE ${evalConditions.join(" AND ")}
-       GROUP BY es.type`,
-      evalParams
+    const [scoreRows] = await query(
+      `SELECT 
+         ROUND(AVG(es.overall_grade), 1) AS studentEvaluationScore,
+         MAX(las.peer_evaluation_score) AS peerEvaluationScore,
+         MAX(las.mentoring_score) AS mentoringScore,
+         MAX(las.supervision_score) AS supervisionScore,
+         MAX(las.other_score) AS otherScore,
+         ROUND(
+           (COALESCE(AVG(es.overall_grade), 0) * 0.50) +
+           (COALESCE(MAX(las.peer_evaluation_score), 0) * 0.20) +
+           (COALESCE(MAX(las.mentoring_score), 0) * 0.15) +
+           (COALESCE(MAX(las.supervision_score), 0) * 0.10) +
+           (COALESCE(MAX(las.other_score), 0) * 0.05),
+           1
+         ) AS overallScore,
+         COUNT(DISTINCT es.id) AS totalResponses
+       FROM users u
+       LEFT JOIN evaluation_submissions es ON es.lecturer_id = u.id ${evalConditions.length > 1 ? `AND ${evalConditions.slice(1).join(" AND ")}` : ""}
+       LEFT JOIN lecturer_award_scores las ON las.lecturer_id = u.id ${filters.semesterId ? "AND las.semester_id = ?" : ""}
+       WHERE u.id = ?
+       GROUP BY u.id`,
+      [...evalParams.slice(1), ...(filters.semesterId ? [filters.semesterId] : []), lecturerId]
     );
 
-    const evaluationSummaries = {
-      theory: { totalResponses: 0, averageScore: 0 },
-      practical: { totalResponses: 0, averageScore: 0 },
+    const scores = {
+      studentEvaluationScore: formatAverage(scoreRows[0]?.studentEvaluationScore),
+      peerEvaluationScore: formatAverage(scoreRows[0]?.peerEvaluationScore),
+      mentoringScore: formatAverage(scoreRows[0]?.mentoringScore),
+      supervisionScore: formatAverage(scoreRows[0]?.supervisionScore),
+      otherScore: formatAverage(scoreRows[0]?.otherScore),
+      overallScore: formatAverage(scoreRows[0]?.overallScore),
+      totalResponses: Number(scoreRows[0]?.totalResponses || 0),
     };
 
-    for (const row of summaryRows) {
-      evaluationSummaries[row.type] = {
-        totalResponses: Number(row.totalResponses || 0),
-        averageScore: formatAverage(row.averageScore),
-      };
-    }
-
     const [reports] = await query(
-      `SELECT id, title, file_name, file_type, file_size, status, admin_comment, reviewed_at, submitted_at
+      `SELECT id, title, file_name, file_type, file_size, status, admin_comment, reviewed_at, submitted_at, report_type
        FROM supervision_reports
        WHERE lecturer_id = ?
        ORDER BY submitted_at DESC`,
       [lecturerId]
     );
 
+    const [peerEvaluations] = await query(
+      `SELECT peu.id, peu.file_name, peu.status, peu.submitted_at, u.full_name AS evaluator_name 
+       FROM peer_evaluation_uploads peu
+       INNER JOIN users u ON peu.evaluator_id = u.id
+       WHERE peu.evaluated_id = ?
+       ORDER BY peu.submitted_at DESC`,
+      [lecturerId]
+    );
+
     res.json({
       lecturer: lecturers[0],
       assignedModules,
-      evaluationSummaries,
+      scores,
       supervisionReports: reports,
+      peerEvaluations,
     });
   } catch (error) {
     res.status(500).json({ message: "Failed to fetch lecturer details.", error: error.message });
@@ -402,5 +512,37 @@ export const downloadDeanSupervisionReport = async (req, res) => {
     res.download(absolutePath, reports[0].file_name);
   } catch (error) {
     res.status(500).json({ message: "Failed to download supervision report.", error: error.message });
+  }
+};
+
+export const downloadDeanPeerEvaluation = async (req, res) => {
+  try {
+    const reportId = parsePositiveInt(req.params.reportId);
+    if (!reportId || !req.user.faculty_id) {
+      return res.status(400).json({ message: "Valid report and faculty are required." });
+    }
+
+    const [reports] = await query(
+      `SELECT peu.file_name, peu.file_path
+       FROM peer_evaluation_uploads peu
+       INNER JOIN users u ON peu.evaluated_id = u.id
+       INNER JOIN departments d ON u.department_id = d.id
+       WHERE peu.id = ? AND d.faculty_id = ?
+       LIMIT 1`,
+      [reportId, req.user.faculty_id]
+    );
+
+    if (reports.length === 0) {
+      return res.status(404).json({ message: "Peer evaluation report not found in your faculty." });
+    }
+
+    const absolutePath = path.join(peerEvaluationsUploadDir, path.basename(reports[0].file_path));
+    if (!fs.existsSync(absolutePath)) {
+      return res.status(404).json({ message: "Report file not found." });
+    }
+
+    res.download(absolutePath, reports[0].file_name);
+  } catch (error) {
+    res.status(500).json({ message: "Failed to download peer evaluation report.", error: error.message });
   }
 };

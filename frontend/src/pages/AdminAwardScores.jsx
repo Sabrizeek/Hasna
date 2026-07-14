@@ -9,10 +9,8 @@ const AdminAwardScores = () => {
   const [filters, setFilters] = useState({ departmentId: "", semesterId: "", academicYear: "" });
   const [search, setSearch] = useState("");
   const [lecturers, setLecturers] = useState([]);
-  const [draftScores, setDraftScores] = useState({});
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [savingId, setSavingId] = useState(null);
 
   const loadFilters = async () => {
     const [departmentsRes, semestersRes] = await Promise.all([
@@ -38,17 +36,7 @@ const AdminAwardScores = () => {
     setError("");
     try {
       const response = await api.get("/admin/award-scores", { params: filters });
-      const loadedLecturers = response.data.lecturers || [];
-      setLecturers(loadedLecturers);
-      setDraftScores(Object.fromEntries(
-        loadedLecturers.map((lecturer) => [
-          lecturer.lecturerId,
-          {
-            supervisionScore: String(lecturer.supervisionScore ?? 0),
-            adminComment: lecturer.adminComment || "",
-          },
-        ])
-      ));
+      setLecturers(response.data.lecturers || []);
     } catch (loadError) {
       setLecturers([]);
       setError(loadError.response?.data?.message || "Unable to load lecturer award scores.");
@@ -65,13 +53,17 @@ const AdminAwardScores = () => {
 
   const handleDownloadScoresCSV = () => {
     downloadCSV(filteredLecturers, "award_scores.csv", [
-      { header: "Lecturer", key: "full_name" },
-      { header: "Department", key: "department_name" },
+      { header: "Rank", key: "rank" },
+      { header: "Lecturer", key: "lecturerName" },
+      { header: "Department", key: "departmentName" },
       { header: "Evaluations", key: "evaluationCount" },
-      { header: "Evaluation Score", key: "evaluationScore" },
-      { header: "Reports", key: "reportsSubmitted" },
-      { header: "Supervision Score", key: "supervisionScore" },
-      { header: "Final Score", key: "finalScore" }
+      { header: "Student Eval Score (50%)", key: "evaluationScore" },
+      { header: "Peer Eval Score (20%)", key: "peerEvaluationScore" },
+      { header: "Mentoring Score (15%)", key: "mentoringScore" },
+      { header: "Supervision Score (10%)", key: "supervisionScore" },
+      { header: "Other Score (5%)", key: "otherScore" },
+      { header: "Final Score", key: "finalScore" },
+      { header: "Reports Submitted", key: "reportsSubmitted" }
     ]);
   };
 
@@ -98,44 +90,6 @@ const AdminAwardScores = () => {
     setFilters((current) => ({ ...current, semesterId: value, academicYear: semester?.academic_year || "" }));
   };
 
-  const updateDraft = (lecturerId, field, value) => {
-    setDraftScores((current) => ({
-      ...current,
-      [lecturerId]: {
-        ...(current[lecturerId] || {}),
-        [field]: value,
-      },
-    }));
-  };
-
-  const saveSupervisionScore = async (lecturer) => {
-    const draft = draftScores[lecturer.lecturerId] || {};
-    const supervisionScore = Number(draft.supervisionScore);
-
-    setError("");
-    setMessage("");
-    if (!Number.isFinite(supervisionScore) || supervisionScore < 0 || supervisionScore > 100) {
-      setError("Supervision score must be a number from 0 to 100.");
-      return;
-    }
-
-    setSavingId(lecturer.lecturerId);
-    try {
-      await api.patch(`/admin/award-scores/${lecturer.lecturerId}`, {
-        semesterId: Number(filters.semesterId),
-        academicYear: filters.academicYear,
-        supervisionScore,
-        adminComment: draft.adminComment || "",
-      });
-      setMessage(`Saved supervision score for ${lecturer.lecturerName}.`);
-      await loadScores();
-    } catch (saveError) {
-      setError(saveError.response?.data?.message || "Unable to save supervision score.");
-    } finally {
-      setSavingId(null);
-    }
-  };
-
   const kpis = [
     ["Lecturers Ranked", totals.lecturers],
     ["Student Evaluations", totals.evaluations],
@@ -154,7 +108,7 @@ const AdminAwardScores = () => {
             <p className="text-sm font-semibold uppercase tracking-[0.24em] text-brandGold">Lecturer Awards</p>
             <h2 className="mt-3 text-3xl font-bold text-brandBlue">Award Scoreboard</h2>
             <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600">
-              Student evaluation scores are calculated automatically and cannot be edited. Admins can add supervision marks from 0 to 100 based on submitted supervision reports.
+              Student evaluation scores are calculated automatically.
             </p>
           </div>
           <div className="grid w-full gap-3 sm:grid-cols-2 xl:max-w-3xl xl:grid-cols-[1fr_1fr_auto]">
@@ -191,20 +145,14 @@ const AdminAwardScores = () => {
         </div>
 
         <div className="mt-6 rounded-2xl border border-amber-100 bg-amber-50 p-5 text-sm leading-7 text-amber-900">
-          Formula for {selectedSemester ? `${selectedSemester.semester_name} - ${selectedSemester.academic_year}` : "the selected semester"}:
-          <span className="font-semibold"> Evaluation Score = average student overall percentage.</span>
-          <span className="font-semibold"> Final Score = Evaluation Score + Supervision Score.</span>
-          Maximum final score is 200.
+          <strong>Scoring Formula</strong> for {selectedSemester ? `${selectedSemester.semester_name} - ${selectedSemester.academic_year}` : "the selected semester"}:
+          <span className="font-semibold"> Final Score = Student Eval (50%) + Peer Eval (20%) + Mentoring (15%) + Supervision (10%) + Other (5%)</span>
         </div>
       </section>
 
       <section className="mt-6 max-h-[48rem] overflow-y-auto pr-2">
         <div className="grid gap-5 xl:grid-cols-2">
         {filteredLecturers.map((lecturer) => {
-          const draft = draftScores[lecturer.lecturerId] || {};
-          const liveSupervisionScore = Number(draft.supervisionScore || 0);
-          const liveFinalScore = (lecturer.evaluationScore + liveSupervisionScore).toFixed(2);
-
           return (
             <article key={lecturer.lecturerId} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -218,60 +166,31 @@ const AdminAwardScores = () => {
                 </div>
                 <div className="rounded-2xl bg-brandBlue px-5 py-4 text-center text-white">
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/70">Final</p>
-                  <p className="mt-1 text-3xl font-bold">{liveFinalScore}</p>
+                  <p className="mt-1 text-3xl font-bold">{lecturer.finalScore}</p>
                 </div>
               </div>
 
-              <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-2 2xl:grid-cols-4">
+              <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
                 <div className="rounded-2xl bg-slate-50 p-4">
-                  <p className="text-xs font-semibold text-slate-500">Evaluations</p>
-                  <p className="mt-2 text-2xl font-bold text-slate-950">{lecturer.evaluationCount}</p>
-                </div>
-                <div className="rounded-2xl bg-slate-50 p-4">
-                  <p className="text-xs font-semibold text-slate-500">Eval Avg</p>
-                  <p className="mt-2 text-2xl font-bold text-slate-950">{lecturer.evaluationAverage}</p>
-                </div>
-                <div className="rounded-2xl bg-slate-50 p-4">
-                  <p className="text-xs font-semibold text-slate-500">Eval Score</p>
+                  <p className="text-xs font-semibold text-slate-500">Student Eval <span className="text-slate-400">(50%)</span></p>
                   <p className="mt-2 text-2xl font-bold text-slate-950">{lecturer.evaluationScore}</p>
                 </div>
                 <div className="rounded-2xl bg-slate-50 p-4">
-                  <p className="text-xs font-semibold text-slate-500">Reports</p>
-                  <p className="mt-2 text-sm font-bold text-slate-950">{lecturer.reportsSubmitted} submitted</p>
-                  <p className="mt-1 text-xs text-slate-500">{lecturer.acceptedReports} accepted</p>
+                  <p className="text-xs font-semibold text-slate-500">Peer Eval <span className="text-slate-400">(20%)</span></p>
+                  <p className="mt-2 text-2xl font-bold text-slate-950">{lecturer.peerEvaluationScore ?? "—"}</p>
                 </div>
-              </div>
-
-              <div className="mt-5 grid gap-4 lg:grid-cols-[180px_1fr_auto] lg:items-end">
-                <label className="space-y-2">
-                  <span className="text-sm font-semibold text-slate-700">Supervision Score</span>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="0.01"
-                    value={draft.supervisionScore ?? ""}
-                    onChange={(e) => updateDraft(lecturer.lecturerId, "supervisionScore", e.target.value)}
-                    className="w-full rounded-2xl border border-slate-300 px-4 py-3"
-                  />
-                </label>
-                <label className="space-y-2">
-                  <span className="text-sm font-semibold text-slate-700">Admin Comment</span>
-                  <textarea
-                    value={draft.adminComment ?? ""}
-                    onChange={(e) => updateDraft(lecturer.lecturerId, "adminComment", e.target.value)}
-                    rows="2"
-                    className="w-full rounded-2xl border border-slate-300 px-4 py-3"
-                    placeholder="Reason for supervision mark"
-                  />
-                </label>
-                <button
-                  onClick={() => saveSupervisionScore(lecturer)}
-                  disabled={savingId === lecturer.lecturerId}
-                  className="rounded-2xl bg-brandBlue px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:bg-slate-300"
-                >
-                  {savingId === lecturer.lecturerId ? "Saving..." : "Save"}
-                </button>
+                <div className="rounded-2xl bg-slate-50 p-4">
+                  <p className="text-xs font-semibold text-slate-500">Mentoring <span className="text-slate-400">(15%)</span></p>
+                  <p className="mt-2 text-2xl font-bold text-slate-950">{lecturer.mentoringScore}</p>
+                </div>
+                <div className="rounded-2xl bg-slate-50 p-4">
+                  <p className="text-xs font-semibold text-slate-500">Supervision <span className="text-slate-400">(10%)</span></p>
+                  <p className="mt-2 text-2xl font-bold text-slate-950">{lecturer.supervisionScore}</p>
+                </div>
+                <div className="rounded-2xl bg-slate-50 p-4">
+                  <p className="text-xs font-semibold text-slate-500">Other <span className="text-slate-400">(5%)</span></p>
+                  <p className="mt-2 text-2xl font-bold text-slate-950">{lecturer.otherScore}</p>
+                </div>
               </div>
             </article>
           );
