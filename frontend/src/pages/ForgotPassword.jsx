@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import Navbar from "../components/Navbar.jsx";
 import SiteFooter from "../components/SiteFooter.jsx";
 import api from "../api/axios.js";
@@ -9,20 +9,25 @@ const ForgotPassword = () => {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [requestedId, setRequestedId] = useState("");
+  const [searchParams] = useSearchParams();
+  const mode = searchParams.get("mode") || "student";
 
   const handleChange = (event) => {
     setFormData((current) => ({ ...current, [event.target.name]: event.target.value }));
   };
 
   const handleSubmit = async (event) => {
-    event.preventDefault();
+    event?.preventDefault();
     setMessage("");
     setError("");
     setLoading(true);
     try {
       const response = await api.post("/auth/forgot-password-request", formData);
       setMessage(response.data.message);
-      setFormData({ universityId: "", email: "" });
+      setRequestedId(formData.universityId);
+      setSubmitted(true);
     } catch (requestError) {
       setError(requestError.response?.data?.message || "Unable to submit password reset request.");
     } finally {
@@ -37,40 +42,69 @@ const ForgotPassword = () => {
         <section className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-soft">
           <p className="text-xs font-semibold uppercase tracking-[0.35em] text-brandGold">Password Help</p>
           <h1 className="mt-3 text-3xl font-bold text-brandBlue">Forgot Password</h1>
-          <p className="mt-3 text-sm leading-6 text-slate-600">
-            Submit your University ID and email. The Admin will review your request.
-          </p>
-
-          <form onSubmit={handleSubmit} className="mt-8 space-y-5">
-            <div>
-              <label className="mb-2 block text-sm font-medium text-slate-700">University ID</label>
-              <input
-                name="universityId"
-                value={formData.universityId}
-                onChange={handleChange}
-                className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none transition focus:border-brandBlue"
-                required
-              />
+          
+          {!submitted ? (
+            <>
+              <p className="mt-3 text-sm leading-6 text-slate-600">
+                Submit your University ID and email to receive a temporary password.
+              </p>
+              <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-slate-700">University ID</label>
+                  <input
+                    name="universityId"
+                    value={formData.universityId}
+                    onChange={handleChange}
+                    className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none transition focus:border-brandBlue"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="mb-2 block text-sm font-medium text-slate-700">Email</label>
+                  <input
+                    name="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none transition focus:border-brandBlue"
+                    required
+                  />
+                </div>
+                {message && <p className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{message}</p>}
+                {error && <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
+                <button disabled={loading} className="w-full rounded-2xl bg-brandBlue px-4 py-3 font-semibold text-white transition hover:opacity-90 disabled:opacity-60">
+                  {loading ? "Sending Request..." : "Send Request"}
+                </button>
+              </form>
+              <Link to={`/login?mode=${mode}`} className="mt-5 inline-flex text-sm font-semibold text-brandBlue">Back to Login</Link>
+            </>
+          ) : (
+            <div className="mt-8 space-y-6">
+              <div className="rounded-2xl bg-emerald-50 p-5 border border-emerald-100">
+                <p className="text-emerald-800 text-sm leading-relaxed">
+                  {message || "If the details are correct, a temporary password has been sent to your email."}
+                </p>
+              </div>
+              
+              <div className="space-y-3">
+                <p className="text-sm text-slate-600 text-center">Didn't receive the email?</p>
+                <button 
+                  onClick={handleSubmit} 
+                  disabled={loading} 
+                  className="w-full rounded-2xl border border-slate-300 px-4 py-3 font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
+                >
+                  {loading ? "Sending..." : "Send again"}
+                </button>
+                
+                <Link 
+                  to={`/login?mode=${mode}&id=${encodeURIComponent(requestedId)}`}
+                  className="w-full inline-flex justify-center rounded-2xl bg-brandBlue px-4 py-3 font-semibold text-white transition hover:opacity-90 mt-2"
+                >
+                  Back to Login Form
+                </Link>
+              </div>
             </div>
-            <div>
-              <label className="mb-2 block text-sm font-medium text-slate-700">Email</label>
-              <input
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleChange}
-                className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none transition focus:border-brandBlue"
-                required
-              />
-            </div>
-            {message && <p className="rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{message}</p>}
-            {error && <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
-            <button disabled={loading} className="w-full rounded-2xl bg-brandBlue px-4 py-3 font-semibold text-white transition hover:opacity-90 disabled:opacity-60">
-              {loading ? "Sending Request..." : "Send Request"}
-            </button>
-          </form>
-
-          <Link to="/login" className="mt-5 inline-flex text-sm font-semibold text-brandBlue">Back to Login</Link>
+          )}
         </section>
       </main>
       <SiteFooter compact />

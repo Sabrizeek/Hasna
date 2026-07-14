@@ -2,6 +2,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { query } from "../config/db.js";
 import { notifyAdmins } from "../utils/notificationService.js";
+import { sendPasswordResetEmail } from "../utils/emailService.js";
 
 const publicRegistrationDisabledMessage = "Public registration is disabled. Please use your University ID to log in.";
 const forgotPasswordGenericMessage = "If the details are correct, a password reset request will be sent to the Admin.";
@@ -128,7 +129,7 @@ export const forgotPasswordRequest = async (req, res) => {
 
   try {
     const [users] = await query(
-      `SELECT id, university_id, email
+      `SELECT id, university_id, email, full_name
        FROM users
        WHERE university_id = ?
          AND email = ?
@@ -140,31 +141,29 @@ export const forgotPasswordRequest = async (req, res) => {
 
     if (users.length > 0) {
       const user = users[0];
-      const [pending] = await query(
-        "SELECT id FROM password_reset_requests WHERE user_id = ? AND status = 'pending' LIMIT 1",
-        [user.id]
-      );
+      
+      // Generate a clean 8-character temporary password
+      const tempPassword = Math.random().toString(36).substring(2, 10);
+      const hashedPassword = await bcrypt.hash(tempPassword, 10);
 
-      if (pending.length === 0) {
-        const [result] = await query(
-          `INSERT INTO password_reset_requests (user_id, university_id, email)
-           VALUES (?, ?, ?)`,
-          [user.id, user.university_id, user.email]
-        );
+      // Update the user's password directly in the database
+      await query("UPDATE users SET password = ?, first_login = 1, must_change_password = 1 WHERE id = ?", [hashedPassword, user.id]);
 
-        await notifyAdmins({
-          title: "New Password Reset Request",
-          message: `New password reset request from ${user.university_id}.`,
-          type: "warning",
-          relatedEntityType: "password_reset_request",
-          relatedEntityId: result.insertId,
-        });
-      }
+      // Email it to the user
+      await sendPasswordResetEmail({
+        to: user.email,
+        name: user.full_name,
+        universityId: user.university_id,
+        temporaryPassword: tempPassword,
+      });
+      
+      return res.json({ message: "A temporary password has been sent to your email." });
     }
 
-    res.json({ message: forgotPasswordGenericMessage });
+    // User wants an explicit error message if the ID or email is incorrect
+    return res.status(404).json({ message: "No account found with the provided University ID and Email combination." });
   } catch (error) {
-    res.status(500).json({ message: "Failed to submit password reset request.", error: error.message });
+    res.status(500).json({ message: "Failed to process password reset request.", error: error.message });
   }
 };
 

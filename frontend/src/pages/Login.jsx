@@ -18,8 +18,9 @@ const Login = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const initialMode = searchParams.get("mode") === "student" ? "student" : "staff";
+  const requestedId = searchParams.get("id") || "";
   const [mode, setMode] = useState(initialMode);
-  const [formData, setFormData] = useState({ identifier: "", password: "" });
+  const [formData, setFormData] = useState({ identifier: requestedId, password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -86,7 +87,7 @@ const Login = () => {
               <PasswordInput name="password" value={formData.password} onChange={handleChange} required />
             </div>
             <div className="text-right">
-              <Link to="/forgot-password" className="text-sm font-semibold text-brandBlue">Forgot Password?</Link>
+              <Link to={`/forgot-password?mode=${mode}`} className="text-sm font-semibold text-brandBlue">Forgot Password?</Link>
             </div>
             {error ? <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}
             <button disabled={loading} className="w-full rounded-2xl bg-brandBlue px-4 py-3 font-semibold text-white transition hover:opacity-90 disabled:opacity-60">

@@ -45,9 +45,17 @@ export const getDashboardData = async (req, res) => {
       });
     }
 
-    // Get student department
-    const [users] = await query("SELECT u.department_id, d.department_name FROM users u LEFT JOIN departments d ON u.department_id = d.id WHERE u.id = ?", [studentId]);
-    const department = users[0] && users[0].department_id ? { id: users[0].department_id, name: users[0].department_name } : null;
+    // Get student department(s) from the student_departments table
+    const [departments] = await query(
+      `SELECT d.id, d.department_name 
+       FROM student_departments sd 
+       JOIN departments d ON sd.department_id = d.id 
+       WHERE sd.student_id = ?`, 
+      [studentId]
+    );
+    const department = departments.length > 0 
+      ? { id: departments[0].id, name: departments.map(d => d.department_name).join(', ') } 
+      : null;
 
     // Get evaluation window for this semester
     const [windows] = await query(

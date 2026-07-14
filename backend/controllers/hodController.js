@@ -92,17 +92,6 @@ export const getDepartmentOverview = async (req, res) => {
       reportParams
     );
 
-    const moduleConditions = ["u.department_id = ?"];
-    const moduleParams = [departmentId];
-    if (filters.semesterId) {
-      moduleConditions.push("s.id = ?");
-      moduleParams.push(filters.semesterId);
-    }
-    if (filters.academicYear) {
-      moduleConditions.push("s.academic_year = ?");
-      moduleParams.push(filters.academicYear);
-    }
-
     const [lecturers] = await query(
       `SELECT u.id AS lecturerId, u.full_name AS name,
               COALESCE(
@@ -114,23 +103,24 @@ export const getDepartmentOverview = async (req, res) => {
               ROUND(AVG(es.overall_grade), 1) AS overallScore,
               COUNT(DISTINCT sr.id) AS reportsSubmitted
        FROM users u
-       LEFT JOIN courses c ON c.lecturer_id = u.id
-       LEFT JOIN semesters s ON c.semester_id = s.id
+       LEFT JOIN lecturer_modules lm ON lm.lecturer_id = u.id
+       LEFT JOIN courses c ON lm.course_id = c.id ${filters.semesterId ? "AND c.semester_id = ?" : ""}
        LEFT JOIN evaluation_submissions es
          ON es.lecturer_id = u.id
         AND es.course_id = c.id
         ${filters.semesterId ? "AND es.semester_id = ?" : ""}
         ${filters.academicYear ? "AND es.academic_year = ?" : ""}
        LEFT JOIN supervision_reports sr ON sr.lecturer_id = u.id
-       WHERE ${moduleConditions.join(" AND ")}
+       WHERE u.department_id = ?
          AND u.role = 'lecturer'
          AND u.status = 'approved'
        GROUP BY u.id, u.full_name
        ORDER BY overallScore DESC, u.full_name ASC`,
       [
         ...(filters.semesterId ? [filters.semesterId] : []),
+        ...(filters.semesterId ? [filters.semesterId] : []),
         ...(filters.academicYear ? [filters.academicYear] : []),
-        ...moduleParams,
+        departmentId,
       ]
     );
 

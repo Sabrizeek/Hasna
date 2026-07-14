@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import AdminLayout from "../components/AdminLayout.jsx";
 import api from "../api/axios.js";
+import { downloadCSV } from "../utils/csvExport.js";
 
 const UserManagement = () => {
   const [users, setUsers] = useState([]);
@@ -8,8 +9,6 @@ const UserManagement = () => {
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [formData, setFormData] = useState({ universityId: "", fullName: "", email: "", role: "student", departmentId: "", departmentIds: [], phone: "" });
-  const [resetRequests, setResetRequests] = useState([]);
-  const [resetSearch, setResetSearch] = useState("");
   const [editingId, setEditingId] = useState(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -23,15 +22,13 @@ const UserManagement = () => {
   });
 
   const loadUsers = async () => {
-    const [usersRes, departmentsRes, resetRequestsRes] = await Promise.all([
+    const [usersRes, departmentsRes] = await Promise.all([
       api.get("/admin/users"),
       api.get("/departments"),
-      api.get("/admin/password-reset-requests?status=pending"),
     ]);
     const loadedDepartments = departmentsRes.data.departments || [];
     setUsers(usersRes.data.users || []);
     setDepartments(loadedDepartments);
-    setResetRequests(resetRequestsRes.data.requests || []);
     setFormData((current) => ({ 
       ...current, 
       departmentId: current.departmentId || String(loadedDepartments[0]?.id || ""),
@@ -51,11 +48,7 @@ const UserManagement = () => {
     });
   }, [users, search, roleFilter]);
 
-  const filteredResetRequests = useMemo(() => {
-    return resetRequests.filter((r) =>
-      `${r.universityId} ${r.fullName} ${r.email}`.toLowerCase().includes(resetSearch.toLowerCase())
-    );
-  }, [resetRequests, resetSearch]);
+
 
   const deleteUser = async (user) => {
     const confirmed = window.confirm(
@@ -113,6 +106,19 @@ const UserManagement = () => {
     } catch (createError) {
       setError(createError.response?.data?.message || "Unable to create user.");
     }
+  };
+
+  const handleDownloadCSV = () => {
+    downloadCSV(filteredUsers, "users.csv", [
+      { header: "Name", key: "full_name" },
+      { header: "University ID", key: "university_id" },
+      { header: "Email", key: "email" },
+      { header: "Phone", key: "phone" },
+      { header: "Role", key: "role" },
+      { header: "Department(s)", key: (row) => row.role === 'student' && row.departmentNames?.length ? row.departmentNames.join(", ") : row.department_name || "" },
+      { header: "Status", key: "status" },
+      { header: "Created At", key: "created_at" }
+    ]);
   };
 
   const editUser = (user) => {
@@ -191,33 +197,7 @@ const UserManagement = () => {
     }
   };
 
-  const approveResetRequest = async (request) => {
-    const confirmed = window.confirm(`Approve password reset for ${request.fullName}?`);
-    if (!confirmed) return;
-    setMessage("");
-    setError("");
-    try {
-      const response = await api.patch(`/admin/password-reset-requests/${request.id}/approve`);
-      setMessage([response.data.message, emailStatusText(response.data.emailStatus)].filter(Boolean).join(" "));
-      loadUsers();
-    } catch (approveError) {
-      setError(approveError.response?.data?.message || "Unable to approve password reset request.");
-    }
-  };
 
-  const rejectResetRequest = async (request) => {
-    const adminNote = window.prompt(`Reject password reset for ${request.fullName}? Optional note:`, "");
-    if (adminNote === null) return;
-    setMessage("");
-    setError("");
-    try {
-      const response = await api.patch(`/admin/password-reset-requests/${request.id}/reject`, { adminNote });
-      setMessage([response.data.message, emailStatusText(response.data.emailStatus)].filter(Boolean).join(" "));
-      loadUsers();
-    } catch (rejectError) {
-      setError(rejectError.response?.data?.message || "Unable to reject password reset request.");
-    }
-  };
 
   return (
     <AdminLayout title="User Management">
@@ -283,55 +263,7 @@ const UserManagement = () => {
         </div>
       </form>
 
-      <section className="mb-6 rounded-3xl border border-amber-200 bg-white p-6 shadow-sm flex flex-col">
-        <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <h3 className="text-xl font-bold text-brandBlue">Password Reset Requests</h3>
-            <span className="rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700">{filteredResetRequests.length} pending</span>
-          </div>
-          <input 
-            placeholder="Search requests..." 
-            value={resetSearch}
-            onChange={(e) => setResetSearch(e.target.value)}
-            className="rounded-2xl border border-slate-300 px-4 py-2 text-sm outline-none transition focus:border-brandBlue w-full sm:w-64"
-          />
-        </div>
-        <div className="max-h-72 overflow-y-auto overflow-x-auto">
-          <table className="w-full table-fixed divide-y divide-slate-200 text-left text-sm [&_td]:break-words [&_th]:break-words min-w-[800px]">
-            <thead className="sticky top-0 z-10 bg-white">
-              <tr className="text-slate-500">
-                <th className="py-3 pr-4 font-semibold">Request ID</th>
-                <th className="py-3 pr-4 font-semibold">University ID</th>
-                <th className="py-3 pr-4 font-semibold">User</th>
-                <th className="py-3 pr-4 font-semibold">Email</th>
-                <th className="py-3 pr-4 font-semibold">Role</th>
-                <th className="py-3 pr-4 font-semibold">Requested</th>
-                <th className="w-44 py-3 pr-4 font-semibold">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredResetRequests.length === 0 ? (
-                <tr><td colSpan="7" className="py-5 text-slate-600">No pending password reset requests matching criteria.</td></tr>
-              ) : filteredResetRequests.map((request) => (
-                <tr key={request.id} className="border-t border-slate-100">
-                  <td className="py-4 pr-4 font-semibold text-brandBlue">#{request.id}</td>
-                  <td className="py-4 pr-4">{request.universityId}</td>
-                  <td className="py-4 pr-4 font-medium">{request.fullName}</td>
-                  <td className="py-4 pr-4 text-slate-600">{request.email}</td>
-                  <td className="py-4 pr-4 capitalize text-slate-600">{request.role}</td>
-                  <td className="py-4 pr-4 text-slate-600">{new Date(request.requestedAt).toLocaleString()}</td>
-                  <td className="py-4 pr-4 whitespace-nowrap">
-                    <div className="inline-flex flex-nowrap gap-2">
-                      <button onClick={() => approveResetRequest(request)} className="rounded-full bg-emerald-600 px-4 py-2 text-xs font-semibold text-white">Approve</button>
-                      <button onClick={() => rejectResetRequest(request)} className="rounded-full bg-red-600 px-4 py-2 text-xs font-semibold text-white">Reject</button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
+
 
       <section className="mb-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -431,6 +363,10 @@ const UserManagement = () => {
               <option value="hod">HoD</option>
               <option value="dean">Dean</option>
             </select>
+            <button onClick={handleDownloadCSV} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-brandGold px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 w-full sm:w-auto">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="h-4 w-4"><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
+              CSV
+            </button>
           </div>
         </div>
         <div className="max-h-[36rem] overflow-y-auto overflow-x-auto">

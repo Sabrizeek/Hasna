@@ -25,10 +25,7 @@ import {
   getLecturerAwardScores,
   getModuleAssignments,
   getPendingUsers,
-  getPasswordResetRequests,
   rejectUser,
-  approvePasswordResetRequest,
-  rejectPasswordResetRequest,
   reopenEvaluationWindow,
   updateEvaluationWindow,
   updateLecturerAwardScore,
@@ -59,9 +56,6 @@ router.patch("/users/:id/activate", activateUser);
 router.patch("/users/:id/deactivate", deactivateUser);
 router.patch("/users/:id/reset-password", resetUserPassword);
 router.delete("/users/:id", deleteUser);
-router.get("/password-reset-requests", getPasswordResetRequests);
-router.patch("/password-reset-requests/:id/approve", approvePasswordResetRequest);
-router.patch("/password-reset-requests/:id/reject", rejectPasswordResetRequest);
 router.post("/notifications", createAdminNotification);
 router.get("/dashboard-stats", getDashboardStats);
 router.get("/module-assignments", getModuleAssignments);

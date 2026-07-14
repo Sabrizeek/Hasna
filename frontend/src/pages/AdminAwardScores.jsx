@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import AdminLayout from "../components/AdminLayout.jsx";
 import api from "../api/axios.js";
+import { downloadCSV } from "../utils/csvExport.js";
 
 const AdminAwardScores = () => {
   const [departments, setDepartments] = useState([]);
@@ -61,6 +62,18 @@ const AdminAwardScores = () => {
     () => semesters.find((semester) => String(semester.id) === filters.semesterId),
     [semesters, filters.semesterId]
   );
+
+  const handleDownloadScoresCSV = () => {
+    downloadCSV(filteredLecturers, "award_scores.csv", [
+      { header: "Lecturer", key: "full_name" },
+      { header: "Department", key: "department_name" },
+      { header: "Evaluations", key: "evaluationCount" },
+      { header: "Evaluation Score", key: "evaluationScore" },
+      { header: "Reports", key: "reportsSubmitted" },
+      { header: "Supervision Score", key: "supervisionScore" },
+      { header: "Final Score", key: "finalScore" }
+    ]);
+  };
 
   const filteredLecturers = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -158,7 +171,13 @@ const AdminAwardScores = () => {
             <select value={filters.semesterId} onChange={(e) => handleSemesterChange(e.target.value)} className="rounded-2xl border border-slate-300 px-4 py-3">
               {semesters.map((semester) => <option key={semester.id} value={semester.id}>{semester.semester_name} - {semester.academic_year}</option>)}
             </select>
-            <button onClick={loadScores} className="rounded-2xl bg-brandBlue px-5 py-3 font-semibold text-white">Refresh</button>
+            <div className="flex gap-2 sm:col-span-2 xl:col-span-1">
+              <button onClick={loadScores} className="w-full rounded-2xl bg-brandBlue px-5 py-3 font-semibold text-white transition hover:opacity-90">Refresh</button>
+              <button onClick={handleDownloadScoresCSV} className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-brandGold px-4 py-3 font-semibold text-white transition hover:opacity-90">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="h-4 w-4"><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
+                CSV
+              </button>
+            </div>
           </div>
         </div>
 

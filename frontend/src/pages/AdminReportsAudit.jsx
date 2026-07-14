@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import api from "../api/axios.js";
 import AdminLayout from "../components/AdminLayout.jsx";
+import { downloadCSV } from "../utils/csvExport.js";
 
 const AdminReportsAudit = () => {
   const [departments, setDepartments] = useState([]);
@@ -120,42 +121,34 @@ const AdminReportsAudit = () => {
     setEvaluationFilters((current) => ({ ...current, semesterId: value, academicYear: semester?.academic_year || "" }));
   };
 
-  const exportCsv = async () => {
-    const response = await api.get("/admin/export/evaluations", {
-      params: {
-        departmentId: filters.departmentId,
-        semesterId: filters.semesterId,
-        academicYear: filters.academicYear,
-        from: filters.from,
-        to: filters.to,
-        format: "csv",
-      },
-      responseType: "blob",
-    });
-    const url = URL.createObjectURL(response.data);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "evaluation-export.csv";
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
+  const handleDownloadEvaluationsCSV = () => {
+    downloadCSV(evaluations, "evaluations.csv", [
+      { header: "Course", key: "courseCode" },
+      { header: "Lecturer", key: "lecturerName" },
+      { header: "Student", key: "studentName" },
+      { header: "Grade", key: "overallGrade" },
+      { header: "Date", key: (row) => new Date(row.submittedAt).toLocaleDateString() }
+    ]);
   };
 
-  const exportEvaluationRecordsCsv = async () => {
-    const response = await api.get("/admin/export/evaluations", {
-      params: { ...evaluationFilters, format: "csv" },
-      responseType: "blob",
-    });
-    const url = URL.createObjectURL(response.data);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "admin-evaluation-records.csv";
-    document.body.appendChild(link);
-    link.click();
-    link.remove();
-    URL.revokeObjectURL(url);
-    loadLogs();
+  const handleDownloadReportsCSV = () => {
+    downloadCSV(filteredReports, "supervision_reports.csv", [
+      { header: "Title", key: "title" },
+      { header: "Lecturer", key: "lecturer_name" },
+      { header: "Department", key: "department_name" },
+      { header: "Status", key: "status" },
+      { header: "Submitted", key: (row) => new Date(row.submitted_at).toLocaleDateString() }
+    ]);
+  };
+
+  const handleDownloadLogsCSV = () => {
+    downloadCSV(logs, "audit_logs.csv", [
+      { header: "Timestamp", key: (row) => new Date(row.created_at).toLocaleString() },
+      { header: "User", key: "user_name" },
+      { header: "Action", key: "action" },
+      { header: "Entity", key: "entity_type" },
+      { header: "Details", key: "details" }
+    ]);
   };
 
   const openEvaluationDetail = async (evaluation) => {
@@ -199,7 +192,7 @@ const AdminReportsAudit = () => {
           <select value={filters.semesterId} onChange={(e) => handleSemester(e.target.value)} className="rounded-2xl border border-slate-300 px-4 py-3"><option value="">All semesters</option>{semesters.map((s) => <option key={s.id} value={s.id}>{s.semester_name} - {s.academic_year}</option>)}</select>
           <input type="date" value={filters.from} onChange={(e) => setFilters((c) => ({ ...c, from: e.target.value }))} className="rounded-2xl border border-slate-300 px-4 py-3" />
           <input type="date" value={filters.to} onChange={(e) => setFilters((c) => ({ ...c, to: e.target.value }))} className="rounded-2xl border border-slate-300 px-4 py-3" />
-          <button onClick={exportCsv} className="rounded-2xl bg-brandBlue px-5 py-3 font-semibold text-white">Export CSV</button>
+          <button onClick={handleDownloadEvaluationsCSV} className="rounded-2xl bg-brandBlue px-5 py-3 font-semibold text-white">Export CSV</button>
         </div>
       </div>
 
@@ -212,7 +205,7 @@ const AdminReportsAudit = () => {
             </div>
             <p className="mt-1 text-sm text-slate-500">Admin-only tracking view with student identity for audit and duplicate investigation.</p>
           </div>
-          <button onClick={exportEvaluationRecordsCsv} className="rounded-2xl bg-brandBlue px-5 py-3 font-semibold text-white">Export Records CSV</button>
+          <button onClick={handleDownloadEvaluationsCSV} className="rounded-2xl bg-brandBlue px-5 py-3 font-semibold text-white">Export Records CSV</button>
         </div>
 
         <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -283,6 +276,7 @@ const AdminReportsAudit = () => {
               <option value="accepted">Accepted</option>
               <option value="rejected">Rejected</option>
             </select>
+            <button onClick={handleDownloadReportsCSV} className="rounded-2xl bg-brandGold px-4 py-2 text-sm font-semibold text-white">Export CSV</button>
           </div>
         </div>
         <div className="max-h-[28rem] overflow-y-auto overflow-x-hidden">
@@ -314,7 +308,10 @@ const AdminReportsAudit = () => {
             <input placeholder="Search" value={auditFilters.search} onChange={(e) => setAuditFilters((c) => ({ ...c, search: e.target.value }))} className="rounded-2xl border border-slate-300 px-4 py-3" />
             <input type="date" value={auditFilters.from} onChange={(e) => setAuditFilters((c) => ({ ...c, from: e.target.value }))} className="rounded-2xl border border-slate-300 px-4 py-3" />
             <input type="date" value={auditFilters.to} onChange={(e) => setAuditFilters((c) => ({ ...c, to: e.target.value }))} className="rounded-2xl border border-slate-300 px-4 py-3" />
-            <button onClick={loadLogs} className="rounded-2xl bg-brandGold px-5 py-3 font-semibold text-white">Search</button>
+            <div className="flex gap-2">
+                <button onClick={loadLogs} className="rounded-2xl bg-brandGold px-5 py-3 font-semibold text-white">Search</button>
+                <button onClick={handleDownloadLogsCSV} className="rounded-2xl bg-slate-600 px-5 py-3 font-semibold text-white">Export</button>
+            </div>
           </div>
         </div>
         <div className="mt-5 max-h-[34rem] overflow-y-auto overflow-x-hidden">

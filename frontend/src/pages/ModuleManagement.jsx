@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import api from "../api/axios.js";
 import AdminLayout from "../components/AdminLayout.jsx";
+import { downloadCSV } from "../utils/csvExport.js";
 
 const emptyCourseForm = {
   course_code: "",
@@ -58,6 +59,17 @@ const ModuleManagement = () => {
       }));
     }
   }, [departments, semesters, editingCourseId, courseForm.department_id]);
+
+  const handleDownloadCoursesCSV = () => {
+    downloadCSV(filteredCourses, "modules.csv", [
+      { header: "Course Code", key: "course_code" },
+      { header: "Course Name", key: "course_name" },
+      { header: "Department", key: "department_name" },
+      { header: "Core/Optional", key: (row) => row.is_core ? "Core" : "Optional" },
+      { header: "Lecturer(s)", key: (row) => assignments.filter(a => a.course_id === row.id).map(a => a.lecturer_name).join(', ') || 'Unassigned' },
+      { header: "Type(s)", key: (row) => [...new Set(assignments.filter(a => a.course_id === row.id).map(a => a.type))].join(', ') || '-' }
+    ]);
+  };
 
   const filteredCourses = useMemo(() => {
     return courses.filter((course) => {
@@ -330,6 +342,10 @@ const ModuleManagement = () => {
                   <option value="theory">Theory</option>
                   <option value="practical">Practical</option>
                 </select>
+                <button onClick={handleDownloadCoursesCSV} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-brandGold px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 w-full sm:w-auto">
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="h-4 w-4"><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
+                  CSV
+                </button>
               </div>
             </div>
             
