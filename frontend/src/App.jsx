@@ -1,4 +1,5 @@
-import { Navigate, Route, Routes } from "react-router-dom";
+import { useEffect } from "react";
+import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import LandingPage from "./pages/LandingPage.jsx";
 import Login from "./pages/Login.jsx";
@@ -24,6 +25,7 @@ import StudentModuleRegistration from "./pages/StudentModuleRegistration.jsx";
 
 import EvaluationThankYou from "./pages/EvaluationThankYou.jsx";
 import LecturerDashboard from "./pages/LecturerDashboard.jsx";
+import LecturerMyEvaluations from "./pages/LecturerMyEvaluations.jsx";
 import LecturerEvaluationResults from "./pages/LecturerEvaluationResults.jsx";
 import LecturerActivityReports from "./pages/LecturerActivityReports.jsx";
 import LecturerPeerEvaluations from "./pages/LecturerPeerEvaluations.jsx";
@@ -35,6 +37,15 @@ import DeanDashboard from "./pages/DeanDashboard.jsx";
 import DeanDepartmentDetail from "./pages/DeanDepartmentDetail.jsx";
 
 const App = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    // Scroll to top unless there's a hash in the URL (which is handled by Layouts)
+    if (!location.hash) {
+      window.scrollTo(0, 0);
+    }
+  }, [location.pathname, location.hash]);
+
   return (
     <Routes>
       <Route path="/" element={<LandingPage />} />
@@ -73,6 +84,7 @@ const App = () => {
 
       <Route element={<ProtectedRoute roles={["lecturer"]} />}>
         <Route path="/lecturer/dashboard" element={<LecturerDashboard />} />
+        <Route path="/lecturer/my-evaluations" element={<LecturerMyEvaluations />} />
         <Route path="/lecturer/evaluation-results/:courseId" element={<LecturerEvaluationResults />} />
         <Route path="/lecturer/supervision-reports" element={<LecturerActivityReports />} />
         <Route path="/lecturer/peer-evaluations" element={<LecturerPeerEvaluations />} />

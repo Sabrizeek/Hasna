@@ -96,11 +96,16 @@ const DeanDepartmentDetail = () => {
       </nav>
 
       <section className="mt-6 rounded-3xl border border-orange-100 bg-white p-6 shadow-sm sm:p-8">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-orange-700">Department Drill-Down</p>
-            <h2 className="mt-3 text-3xl font-bold text-slate-950">{details?.department?.department_name || "Department"}</h2>
-            <p className="mt-2 text-sm text-slate-600">HoD: {details?.hod?.name || "Not assigned"}</p>
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex items-start gap-4">
+            <Link to="/dean/dashboard" className="rounded-2xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 mt-1 shrink-0">
+              &larr; Back
+            </Link>
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.24em] text-orange-700">Department Drill-Down</p>
+              <h2 className="mt-2 text-3xl font-bold text-slate-950">{details?.department?.department_name || "Department"}</h2>
+              <p className="mt-2 text-sm text-slate-600">HoD: {details?.hod?.name || "Not assigned"}</p>
+            </div>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row">
             <select value={filters.semesterId} onChange={handleSemesterChange} className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-100">
@@ -111,9 +116,6 @@ const DeanDepartmentDetail = () => {
             <button onClick={downloadDepartmentReport} className="rounded-2xl bg-orange-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-orange-700">
               Download Department Report
             </button>
-            <Link to="/dean/dashboard" className="rounded-2xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">
-              Back
-            </Link>
           </div>
         </div>
 

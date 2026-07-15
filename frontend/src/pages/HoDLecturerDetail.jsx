@@ -79,16 +79,20 @@ const HoDLecturerDetail = () => {
           <div className="rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">{error}</div>
         ) : (
           <>
-            <div className="grid gap-6 lg:grid-cols-[180px_1fr]">
-              <div className="flex h-40 w-40 items-center justify-center rounded-3xl bg-amber-600 text-4xl font-bold text-white">
-                {details.lecturer.photo_url ? (
-                  <img src={details.lecturer.photo_url} alt={details.lecturer.name} className="h-full w-full rounded-3xl object-cover" />
-                ) : initialsFromName(details.lecturer.name)}
-              </div>
-              <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.24em] text-amber-700">Lecturer Profile</p>
-                <h2 className="mt-3 text-3xl font-bold text-slate-950">{details.lecturer.name}</h2>
-                <p className="mt-2 text-sm text-slate-600">{details.lecturer.email}</p>
+            <div className="flex flex-col sm:flex-row items-start gap-4">
+              <Link to={dashboardPath} className="rounded-2xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 mt-1 shrink-0">
+                &larr; Back
+              </Link>
+              <div className="grid gap-6 lg:grid-cols-[180px_1fr] w-full">
+                <div className="flex h-40 w-40 items-center justify-center rounded-3xl bg-amber-600 text-4xl font-bold text-white">
+                  {details.lecturer.photo_url ? (
+                    <img src={details.lecturer.photo_url} alt={details.lecturer.name} className="h-full w-full rounded-3xl object-cover" />
+                  ) : initialsFromName(details.lecturer.name)}
+                </div>
+                <div>
+                  <p className="text-sm font-semibold uppercase tracking-[0.24em] text-amber-700">Lecturer Profile</p>
+                  <h2 className="mt-2 text-3xl font-bold text-slate-950">{details.lecturer.name}</h2>
+                  <p className="mt-2 text-sm text-slate-600">{details.lecturer.email}</p>
                 <div className="mt-5 grid gap-4 md:grid-cols-3">
                   <div className="rounded-2xl bg-slate-50 p-4">
                     <p className="text-xs font-semibold uppercase text-slate-500">Department</p>
@@ -102,6 +106,7 @@ const HoDLecturerDetail = () => {
                     <p className="text-xs font-semibold uppercase text-slate-500">Modules</p>
                     <p className="mt-2 font-bold text-slate-950">{details.assignedModules.length}</p>
                   </div>
+                </div>
                 </div>
               </div>
             </div>

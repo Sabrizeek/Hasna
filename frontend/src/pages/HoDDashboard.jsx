@@ -36,16 +36,27 @@ const HoDDashboard = () => {
         const response = await api.get("/hod/semesters");
         const loadedSemesters = response.data.semesters || [];
         setSemesters(loadedSemesters);
-        // Default to active semester if available, otherwise show all
-        const activeSemester = loadedSemesters.find((semester) => Number(semester.is_active) === 1);
-        if (activeSemester) {
-          setFilters({
-            semesterId: String(activeSemester.id),
-            academicYear: activeSemester.academic_year,
-          });
+        
+        const savedSemesterId = localStorage.getItem('hodSelectedSemester');
+        if (savedSemesterId !== null) {
+          if (savedSemesterId === "") {
+            setFilters({ semesterId: "", academicYear: "" });
+          } else {
+            const selected = loadedSemesters.find((s) => String(s.id) === savedSemesterId);
+            if (selected) {
+              setFilters({ semesterId: String(selected.id), academicYear: selected.academic_year });
+            } else {
+              const activeSemester = loadedSemesters.find((semester) => Number(semester.is_active) === 1);
+              setFilters(activeSemester ? { semesterId: String(activeSemester.id), academicYear: activeSemester.academic_year } : { semesterId: "", academicYear: "" });
+            }
+          }
         } else {
-          // No active semester — show all data
-          setFilters({ semesterId: "", academicYear: "" });
+          const activeSemester = loadedSemesters.find((semester) => Number(semester.is_active) === 1);
+          if (activeSemester) {
+            setFilters({ semesterId: String(activeSemester.id), academicYear: activeSemester.academic_year });
+          } else {
+            setFilters({ semesterId: "", academicYear: "" });
+          }
         }
       } catch (loadError) {
         setError(loadError.response?.data?.message || "Unable to load semesters.");
@@ -105,12 +116,14 @@ const HoDDashboard = () => {
   const handleSemesterChange = (event) => {
     if (event.target.value === "") {
       setFilters({ semesterId: "", academicYear: "" });
+      localStorage.setItem('hodSelectedSemester', "");
     } else {
       const selected = semesters.find((semester) => String(semester.id) === event.target.value);
       setFilters({
         semesterId: event.target.value,
         academicYear: selected?.academic_year || "",
       });
+      localStorage.setItem('hodSelectedSemester', event.target.value);
     }
   };
 

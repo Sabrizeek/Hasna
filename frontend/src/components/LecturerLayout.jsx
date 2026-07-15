@@ -6,7 +6,7 @@ import SiteFooter from "./SiteFooter.jsx";
 
 const navItems = [
   { key: "dashboard", label: "Dashboard", to: "/lecturer/dashboard" },
-  { key: "evaluations", label: "My Evaluations", to: "/lecturer/dashboard#evaluations" },
+  { key: "evaluations", label: "My Evaluations", to: "/lecturer/my-evaluations" },
   { key: "reports", label: "Activity Reports", to: "/lecturer/supervision-reports" },
   { key: "peer", label: "Peer Evaluations", to: "/lecturer/peer-evaluations" },
 ];
@@ -17,12 +17,6 @@ const LecturerLayout = ({ children }) => {
   const location = useLocation();
 
   const isActiveItem = (item) => {
-    if (item.key === "dashboard") {
-      return location.pathname === "/lecturer/dashboard" && location.hash !== "#evaluations";
-    }
-    if (item.key === "evaluations") {
-      return location.pathname === "/lecturer/dashboard" && location.hash === "#evaluations";
-    }
     return location.pathname === item.to;
   };
 

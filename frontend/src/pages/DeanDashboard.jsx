@@ -29,11 +29,27 @@ const DeanDashboard = () => {
         const response = await api.get("/dean/semesters");
         const loaded = response.data.semesters || [];
         setSemesters(loaded);
-        const activeSemester = loaded.find((semester) => Number(semester.is_active) === 1);
-        if (activeSemester) {
-          setFilters({ semesterId: String(activeSemester.id), academicYear: activeSemester.academic_year });
+        
+        const savedSemesterId = localStorage.getItem('deanSelectedSemester');
+        if (savedSemesterId !== null) {
+          if (savedSemesterId === "") {
+            setFilters({ semesterId: "", academicYear: "" });
+          } else {
+            const selected = loaded.find((s) => String(s.id) === savedSemesterId);
+            if (selected) {
+              setFilters({ semesterId: String(selected.id), academicYear: selected.academic_year });
+            } else {
+              const activeSemester = loaded.find((semester) => Number(semester.is_active) === 1);
+              setFilters(activeSemester ? { semesterId: String(activeSemester.id), academicYear: activeSemester.academic_year } : { semesterId: "", academicYear: "" });
+            }
+          }
         } else {
-          setFilters({ semesterId: "", academicYear: "" });
+          const activeSemester = loaded.find((semester) => Number(semester.is_active) === 1);
+          if (activeSemester) {
+            setFilters({ semesterId: String(activeSemester.id), academicYear: activeSemester.academic_year });
+          } else {
+            setFilters({ semesterId: "", academicYear: "" });
+          }
         }
       } catch (loadError) {
         setError(loadError.response?.data?.message || "Unable to load semesters.");
@@ -77,9 +93,11 @@ const DeanDashboard = () => {
   const handleSemesterChange = (event) => {
     if (event.target.value === "") {
       setFilters({ semesterId: "", academicYear: "" });
+      localStorage.setItem('deanSelectedSemester', "");
     } else {
       const selected = semesters.find((semester) => String(semester.id) === event.target.value);
       setFilters({ semesterId: event.target.value, academicYear: selected?.academic_year || "" });
+      localStorage.setItem('deanSelectedSemester', event.target.value);
     }
   };
 

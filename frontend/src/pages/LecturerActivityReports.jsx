@@ -113,7 +113,12 @@ const LecturerSupervisionReports = () => {
       setMessage("Activity report uploaded successfully.");
       await loadReports();
     } catch (uploadError) {
-      setError(uploadError.response?.data?.message || "Unable to upload supervision report.");
+      const backendMessage = uploadError.response?.data?.message;
+      const backendError = uploadError.response?.data?.error;
+      const displayError = backendError 
+        ? `${backendMessage} (${backendError})` 
+        : (backendMessage || "Unable to upload supervision report.");
+      setError(displayError);
     } finally {
       setUploading(false);
     }
