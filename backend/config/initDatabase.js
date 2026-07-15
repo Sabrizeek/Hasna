@@ -20,7 +20,7 @@ const createTables = [
     email VARCHAR(150) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
     role ENUM('student', 'lecturer', 'admin', 'hod', 'dean') NOT NULL,
-    status ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending',
+    status ENUM('pending', 'approved', 'rejected', 'inactive') NOT NULL DEFAULT 'pending',
     department_id INT NULL,
     profile_photo VARCHAR(500) NULL,
     phone VARCHAR(30) NULL,
@@ -41,6 +41,7 @@ const createTables = [
     semester_name VARCHAR(100) NOT NULL,
     academic_year VARCHAR(20) NOT NULL,
     is_active TINYINT(1) NOT NULL DEFAULT 0,
+    module_selection_deadline DATETIME NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
   `CREATE TABLE IF NOT EXISTS courses (
@@ -225,6 +226,7 @@ const createTables = [
     lecturer_id INT NOT NULL,
     semester_id INT NOT NULL,
     academic_year VARCHAR(20) NOT NULL,
+    peer_evaluation_score DECIMAL(6,2) NOT NULL DEFAULT 0,
     supervision_score DECIMAL(6,2) NOT NULL DEFAULT 0,
     mentoring_score DECIMAL(6,2) NOT NULL DEFAULT 0,
     other_score DECIMAL(6,2) NOT NULL DEFAULT 0,

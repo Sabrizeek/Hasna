@@ -1,9 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import Navbar from "../components/Navbar.jsx";
-import PasswordInput from "../components/PasswordInput.jsx";
-import SiteFooter from "../components/SiteFooter.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
+import "../styles/landing.css";
 
 const homeByRole = {
   admin: "/admin/dashboard",
@@ -23,6 +21,9 @@ const Login = () => {
   const [formData, setFormData] = useState({ identifier: requestedId, password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  const isStudent = mode === "student";
 
   const setLoginMode = (nextMode) => {
     setMode(nextMode);
@@ -54,50 +55,132 @@ const Login = () => {
     }
   };
 
-  const isStudent = mode === "student";
-
   return (
-    <div className="min-h-screen bg-brandBg">
-      <Navbar />
-      <div className="grid min-h-[calc(100vh-80px)] place-items-center px-4 py-10 sm:px-6 lg:px-10">
-        <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-8 shadow-soft">
-          <p className="text-xs font-semibold uppercase tracking-[0.35em] text-brandGold">Welcome Back</p>
-          <h1 className="mt-3 text-3xl font-bold text-brandBlue">{isStudent ? "Student Login" : "Staff Login"}</h1>
+    <>
+      <Link className="back-home" to="/">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        Back to home
+      </Link>
 
-          <div className="mt-6 grid grid-cols-2 rounded-2xl bg-slate-100 p-1">
-            <button type="button" onClick={() => setLoginMode("student")} className={`rounded-xl px-4 py-2 text-sm font-semibold ${isStudent ? "bg-white text-brandBlue shadow-sm" : "text-slate-600"}`}>Student</button>
-            <button type="button" onClick={() => setLoginMode("staff")} className={`rounded-xl px-4 py-2 text-sm font-semibold ${!isStudent ? "bg-white text-brandBlue shadow-sm" : "text-slate-600"}`}>Staff</button>
+      <div className="page">
+        {/* LEFT VISUAL PANEL */}
+        <aside className="visual">
+          <div className="visual-bg"></div>
+          <div className="visual-scrim"></div>
+          <svg className="flame-mark" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <g stroke="#F2C46D" strokeWidth="0.6" opacity="0.55">
+              <line x1="100" y1="100" x2="100" y2="6" transform="rotate(0 100 100)"/>
+              <line x1="100" y1="100" x2="100" y2="6" transform="rotate(30 100 100)"/>
+              <line x1="100" y1="100" x2="100" y2="6" transform="rotate(60 100 100)"/>
+              <line x1="100" y1="100" x2="100" y2="6" transform="rotate(90 100 100)"/>
+              <line x1="100" y1="100" x2="100" y2="6" transform="rotate(120 100 100)"/>
+              <line x1="100" y1="100" x2="100" y2="6" transform="rotate(150 100 100)"/>
+              <line x1="100" y1="100" x2="100" y2="6" transform="rotate(180 100 100)"/>
+              <line x1="100" y1="100" x2="100" y2="6" transform="rotate(210 100 100)"/>
+              <line x1="100" y1="100" x2="100" y2="6" transform="rotate(240 100 100)"/>
+              <line x1="100" y1="100" x2="100" y2="6" transform="rotate(270 100 100)"/>
+              <line x1="100" y1="100" x2="100" y2="6" transform="rotate(300 100 100)"/>
+              <line x1="100" y1="100" x2="100" y2="6" transform="rotate(330 100 100)"/>
+            </g>
+            <circle cx="100" cy="100" r="46" fill="none" stroke="#F2C46D" strokeWidth="1" opacity="0.4"/>
+            <path d="M100 66c14 16 18 28 18 38a18 18 0 1 1-36 0c0-10 4-22 18-38z" fill="#F2C46D" opacity="0.45"/>
+          </svg>
+
+          <div className="visual-top">
+            <Link className="visual-brand" to="/">
+              <img src="/assets/images/crest.png" alt="University of Ruhuna crest" />
+              <span>
+                <span className="b1" style={{display: "block"}}>University of Ruhuna</span>
+                <span className="b2">Lecturer Evaluation System</span>
+              </span>
+            </Link>
           </div>
 
-          <form onSubmit={handleSubmit} className="mt-8 space-y-5">
-            <div>
-              <label className="mb-2 block text-sm font-medium text-slate-700">
-                {isStudent ? "University ID" : "University ID or Email"}
-              </label>
-              <input
-                name="identifier"
-                value={formData.identifier}
-                onChange={handleChange}
-                className="w-full rounded-2xl border border-slate-300 px-4 py-3 outline-none transition focus:border-brandBlue"
-                required
-              />
+          <div className="visual-bottom">
+            <h1>Where feedback shapes <em>better</em> teaching.</h1>
+            <p>Sign in to submit or review course evaluations for the Faculty of Science, one semester at a time.</p>
+            <div className="visual-meta">
+              <div>
+                <div className="k">Confidential</div>
+                <div className="v">Every response is kept separate from student identity.</div>
+              </div>
+              <div>
+                <div className="k">Faculty-wide</div>
+                <div className="v">One system across every department in the faculty.</div>
+              </div>
             </div>
-            <div>
-              <label className="mb-2 block text-sm font-medium text-slate-700">Password</label>
-              <PasswordInput name="password" value={formData.password} onChange={handleChange} required />
+          </div>
+        </aside>
+
+        {/* RIGHT FORM PANEL */}
+        <main className="form-side">
+          <div className="form-wrap">
+
+            <div className="mobile-brand">
+              <img src="/assets/images/crest.png" alt="University of Ruhuna crest" />
+              <span>
+                <span className="b1" style={{display: "block"}}>University of Ruhuna</span>
+                <span className="b2">Lecturer Evaluation System</span>
+              </span>
             </div>
-            <div className="text-right">
-              <Link to={`/forgot-password?mode=${mode}`} className="text-sm font-semibold text-brandBlue">Forgot Password?</Link>
+
+            <span className="eyebrow form-eyebrow">Welcome back</span>
+            <h2 id="formTitle">{isStudent ? 'Student Login' : 'Staff Login'}</h2>
+
+            <div className="role-toggle" role="tablist" aria-label="Choose login type">
+              <button type="button" onClick={() => setLoginMode('student')} className={isStudent ? 'active' : ''} role="tab" aria-selected={isStudent}>Student</button>
+              <button type="button" onClick={() => setLoginMode('staff')} className={!isStudent ? 'active' : ''} role="tab" aria-selected={!isStudent}>Staff</button>
             </div>
-            {error ? <p className="rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}
-            <button disabled={loading} className="w-full rounded-2xl bg-brandBlue px-4 py-3 font-semibold text-white transition hover:opacity-90 disabled:opacity-60">
-              {loading ? "Logging in..." : "Login"}
-            </button>
-          </form>
-        </div>
+
+            <form id="loginForm" onSubmit={handleSubmit} autoComplete="on">
+              <div className="field">
+                <label htmlFor="idField" id="idLabel">University ID</label>
+                <input 
+                  type="text" 
+                  id="idField" 
+                  name="identifier" 
+                  placeholder={isStudent ? 'e.g. SC/2021/00123' : 'e.g. R012345'} 
+                  required 
+                  title={isStudent ? 'Format: SC/20xx/xxxxx' : 'Format: Rxxxxxx'} 
+                  value={formData.identifier}
+                  onChange={handleChange}
+                />
+              </div>
+
+              <div className="field">
+                <label htmlFor="passwordField">Password</label>
+                <div className="input-wrap">
+                  <input 
+                    type={showPassword ? "text" : "password"} 
+                    id="passwordField" 
+                    name="password" 
+                    placeholder="Enter your password" 
+                    required 
+                    value={formData.password}
+                    onChange={handleChange}
+                  />
+                  <button type="button" className="toggle-visibility" onClick={() => setShowPassword(!showPassword)} aria-label="Show password">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+                  </button>
+                </div>
+              </div>
+
+              <div className="row-between" style={{marginBottom: "20px"}}>
+                <Link to={`/forgot-password?mode=${mode}`} style={{fontSize: "14px", color: "var(--violet-500)", fontWeight: "600", textDecoration: "none"}}>Forgot password?</Link>
+              </div>
+
+              {error && <div style={{background: "#FEE2E2", color: "#B91C1C", padding: "12px", borderRadius: "8px", marginBottom: "20px", fontSize: "14px", fontWeight: "500"}}>{error}</div>}
+
+              <button type="submit" disabled={loading} className="btn-submit" style={{opacity: loading ? 0.7 : 1}}>{loading ? "Logging in..." : "Log In"}</button>
+            </form>
+
+            <div className="divider">Need help</div>
+            <p className="helper">Trouble signing in? <Link to="#">Contact the Faculty IT desk</Link></p>
+          </div>
+        </main>
+
       </div>
-      <SiteFooter compact />
-    </div>
+    </>
   );
 };
 
