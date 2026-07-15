@@ -313,6 +313,26 @@ const createTables = [
     CONSTRAINT fk_peer_upload_evaluator FOREIGN KEY (evaluator_id) REFERENCES users(id) ON UPDATE CASCADE ON DELETE CASCADE,
     CONSTRAINT fk_peer_upload_evaluated FOREIGN KEY (evaluated_id) REFERENCES users(id) ON UPDATE CASCADE ON DELETE CASCADE
   ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+  `CREATE TABLE IF NOT EXISTS student_courses (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    student_id INT NOT NULL,
+    course_id INT NOT NULL,
+    semester_id INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_student_courses (student_id, course_id, semester_id),
+    CONSTRAINT student_courses_ibfk_1 FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT student_courses_ibfk_2 FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE,
+    CONSTRAINT student_courses_ibfk_3 FOREIGN KEY (semester_id) REFERENCES semesters(id) ON DELETE CASCADE
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
+  `CREATE TABLE IF NOT EXISTS student_departments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    student_id INT NOT NULL,
+    department_id INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uq_student_departments (student_id, department_id),
+    CONSTRAINT student_departments_ibfk_1 FOREIGN KEY (student_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT student_departments_ibfk_2 FOREIGN KEY (department_id) REFERENCES departments(id) ON DELETE CASCADE
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`,
 ];
 
 const questionSeeds = [
@@ -380,6 +400,27 @@ const addUniqueIndexIfMissing = async (tableName, indexName, columns) => {
   }
 };
 
+const tableExists = async (tableName) => {
+  const [rows] = await query(
+    `SELECT TABLE_NAME
+     FROM INFORMATION_SCHEMA.TABLES
+     WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ?
+     LIMIT 1`,
+    [databaseName, tableName]
+  );
+  return rows.length > 0;
+};
+
+const migrateEnumIfMissing = async (tableName, columnName, newEnumDefinition) => {
+  // Safely alters an ENUM column to add missing values without data loss
+  try {
+    await query(`ALTER TABLE ${tableName} MODIFY COLUMN ${columnName} ${newEnumDefinition}`);
+  } catch (err) {
+    // Ignore if already up to date
+    if (err.code !== 'ER_CANT_CREATE_TABLE') throw err;
+  }
+};
+
 const migrateExistingTables = async () => {
   await addColumnIfMissing("users", "university_id", "VARCHAR(50) NULL UNIQUE AFTER id");
   await addColumnIfMissing("users", "profile_photo", "VARCHAR(500) NULL AFTER department_id");
@@ -390,10 +431,25 @@ const migrateExistingTables = async () => {
   await addColumnIfMissing("users", "last_login", "DATETIME NULL AFTER created_by");
   await addColumnIfMissing("users", "deleted_at", "DATETIME NULL AFTER last_login");
 
+  // Expand users.status ENUM to include 'inactive' for deactivated accounts
+  await migrateEnumIfMissing(
+    "users",
+    "status",
+    "ENUM('pending','approved','rejected','inactive') NOT NULL DEFAULT 'pending'"
+  );
+
   await addColumnIfMissing("questions", "type", "ENUM('theory','practical') NOT NULL DEFAULT 'theory' AFTER id");
   await addColumnIfMissing("questions", "label", "VARCHAR(100) NULL AFTER type");
   await addColumnIfMissing("questions", "display_order", "INT NOT NULL DEFAULT 0 AFTER question_text");
   await addColumnIfMissing("questions", "is_active", "TINYINT(1) NOT NULL DEFAULT 1 AFTER display_order");
+
+  // Migrate lecturer_award_scores: add columns added after initial release
+  await addColumnIfMissing("lecturer_award_scores", "mentoring_score", "DECIMAL(6,2) NOT NULL DEFAULT 0 AFTER supervision_score");
+  await addColumnIfMissing("lecturer_award_scores", "other_score", "DECIMAL(6,2) NOT NULL DEFAULT 0 AFTER mentoring_score");
+  await addColumnIfMissing("lecturer_award_scores", "peer_evaluation_score", "DECIMAL(6,2) NOT NULL DEFAULT 0 AFTER other_score");
+
+  // Migrate semesters: add module_selection_deadline added after initial release
+  await addColumnIfMissing("semesters", "module_selection_deadline", "DATETIME NULL DEFAULT NULL");
 
   await query("UPDATE questions SET category = type WHERE category IS NULL OR category = ''");
 };

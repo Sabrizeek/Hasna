@@ -32,8 +32,8 @@ export const supervisionReportUpload = multer({
   },
   fileFilter: (req, file, callback) => {
     if (!allowedMimeTypes.has(file.mimetype)) {
-      callback(Object.assign(new Error("Only PDF, DOC, and DOCX files are allowed."), { status: 400 }));
-      return;
+      req.fileValidationError = "Only PDF, DOC, and DOCX files are allowed.";
+      return callback(null, false);
     }
 
     callback(null, true);
@@ -60,8 +60,8 @@ export const profilePhotoUpload = multer({
   limits: { fileSize: 2 * 1024 * 1024 },
   fileFilter: (req, file, callback) => {
     if (!imageMimeTypes.has(file.mimetype)) {
-      callback(Object.assign(new Error("Only JPG, PNG, and WEBP images are allowed."), { status: 400 }));
-      return;
+      req.fileValidationError = "Only JPG, PNG, and WEBP images are allowed.";
+      return callback(null, false);
     }
     callback(null, true);
   },
@@ -92,8 +92,8 @@ export const peerEvaluationUpload = multer({
   limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, callback) => {
     if (!peerEvalMimeTypes.has(file.mimetype)) {
-      callback(Object.assign(new Error("Only PDF, JPG, and PNG files are allowed."), { status: 400 }));
-      return;
+      req.fileValidationError = "Only PDF, JPG, and PNG files are allowed.";
+      return callback(null, false);
     }
     callback(null, true);
   },

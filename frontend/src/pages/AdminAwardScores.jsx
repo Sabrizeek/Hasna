@@ -32,10 +32,13 @@ const AdminAwardScores = () => {
   };
 
   const loadScores = async () => {
-    if (!filters.semesterId || !filters.academicYear) return;
     setError("");
     try {
-      const response = await api.get("/admin/award-scores", { params: filters });
+      const params = {};
+      if (filters.semesterId) params.semesterId = filters.semesterId;
+      if (filters.academicYear) params.academicYear = filters.academicYear;
+      if (filters.departmentId) params.departmentId = filters.departmentId;
+      const response = await api.get("/admin/award-scores", { params });
       setLecturers(response.data.lecturers || []);
     } catch (loadError) {
       setLecturers([]);
@@ -86,8 +89,12 @@ const AdminAwardScores = () => {
   }), [filteredLecturers, topLecturer]);
 
   const handleSemesterChange = (value) => {
-    const semester = semesters.find((item) => String(item.id) === value);
-    setFilters((current) => ({ ...current, semesterId: value, academicYear: semester?.academic_year || "" }));
+    if (value === "") {
+      setFilters((current) => ({ ...current, semesterId: "", academicYear: "" }));
+    } else {
+      const semester = semesters.find((item) => String(item.id) === value);
+      setFilters((current) => ({ ...current, semesterId: value, academicYear: semester?.academic_year || "" }));
+    }
   };
 
   const kpis = [
@@ -123,6 +130,7 @@ const AdminAwardScores = () => {
               {departments.map((department) => <option key={department.id} value={department.id}>{department.department_name}</option>)}
             </select>
             <select value={filters.semesterId} onChange={(e) => handleSemesterChange(e.target.value)} className="rounded-2xl border border-slate-300 px-4 py-3">
+              <option value="">All Semesters</option>
               {semesters.map((semester) => <option key={semester.id} value={semester.id}>{semester.semester_name} - {semester.academic_year}</option>)}
             </select>
             <div className="flex gap-2 sm:col-span-2 xl:col-span-1">

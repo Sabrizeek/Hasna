@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import AdminLayout from "../components/AdminLayout.jsx";
 import api from "../api/axios.js";
 import { downloadCSV } from "../utils/csvExport.js";
+import SearchableSelect from "../components/SearchableSelect.jsx";
 
 const UserManagement = () => {
   const [users, setUsers] = useState([]);
@@ -320,20 +321,17 @@ const UserManagement = () => {
             </select>
           )}
           {notificationForm.targetType === "user" && (
-            <select
-              name="userId"
-              value={notificationForm.userId}
-              onChange={handleNotificationChange}
-              className="rounded-2xl border border-slate-300 px-4 py-3"
-              required
-            >
-              <option value="">Select user</option>
-              {users.map((user) => (
-                <option key={user.id} value={user.id}>
-                  {user.full_name} ({user.university_id})
-                </option>
-              ))}
-            </select>
+            <div className="lg:col-span-1">
+              <SearchableSelect
+                value={notificationForm.userId}
+                onChange={(e) => handleNotificationChange({ target: { name: 'userId', value: e.target.value } })}
+                placeholder="Select user"
+                options={users.map((user) => ({
+                  label: `${user.full_name} (${user.university_id})`,
+                  value: user.id
+                }))}
+              />
+            </div>
           )}
           <textarea
             name="message"

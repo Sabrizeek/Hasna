@@ -66,6 +66,8 @@ export const updateMyProfile = async (req, res) => {
 
 export const updateMyPhoto = async (req, res) => {
   try {
+    // Multer v2: fileFilter rejection is stored in req.fileValidationError
+    if (req.fileValidationError) return res.status(400).json({ message: req.fileValidationError });
     if (!req.file) return res.status(400).json({ message: "Profile photo is required." });
     const photoUrl = `/uploads/profile-photos/${req.file.filename}`;
     await query("UPDATE users SET profile_photo = ? WHERE id = ?", [photoUrl, req.user.id]);
@@ -75,6 +77,7 @@ export const updateMyPhoto = async (req, res) => {
     res.status(500).json({ message: "Failed to update profile photo.", error: error.message });
   }
 };
+
 
 export const updateMyPassword = async (req, res) => {
   try {

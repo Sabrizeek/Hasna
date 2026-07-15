@@ -28,10 +28,12 @@ const DeanDashboard = () => {
       try {
         const response = await api.get("/dean/semesters");
         const loaded = response.data.semesters || [];
-        const selected = loaded.find((semester) => Number(semester.is_active) === 1) || loaded[0];
         setSemesters(loaded);
-        if (selected) {
-          setFilters({ semesterId: String(selected.id), academicYear: selected.academic_year });
+        const activeSemester = loaded.find((semester) => Number(semester.is_active) === 1);
+        if (activeSemester) {
+          setFilters({ semesterId: String(activeSemester.id), academicYear: activeSemester.academic_year });
+        } else {
+          setFilters({ semesterId: "", academicYear: "" });
         }
       } catch (loadError) {
         setError(loadError.response?.data?.message || "Unable to load semesters.");
@@ -44,7 +46,7 @@ const DeanDashboard = () => {
 
   useEffect(() => {
     const loadOverview = async () => {
-      if (!filters.semesterId || !filters.academicYear) return;
+      // Allow loading with empty semesterId to show all semesters
       setLoading(true);
       setError("");
       try {
@@ -73,8 +75,12 @@ const DeanDashboard = () => {
   }), [overview]);
 
   const handleSemesterChange = (event) => {
-    const selected = semesters.find((semester) => String(semester.id) === event.target.value);
-    setFilters({ semesterId: event.target.value, academicYear: selected?.academic_year || "" });
+    if (event.target.value === "") {
+      setFilters({ semesterId: "", academicYear: "" });
+    } else {
+      const selected = semesters.find((semester) => String(semester.id) === event.target.value);
+      setFilters({ semesterId: event.target.value, academicYear: selected?.academic_year || "" });
+    }
   };
 
   const downloadFacultyReport = async () => {
@@ -126,6 +132,7 @@ const DeanDashboard = () => {
           </div>
           <div className="flex flex-col gap-3 sm:flex-row">
             <select value={filters.semesterId} onChange={handleSemesterChange} className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-100">
+              <option value="">All Semesters</option>
               {semesters.map((semester) => (
                 <option key={semester.id} value={semester.id}>{semester.semester_name} - {semester.academic_year}</option>
               ))}

@@ -35,14 +35,17 @@ const HoDDashboard = () => {
       try {
         const response = await api.get("/hod/semesters");
         const loadedSemesters = response.data.semesters || [];
-        const activeSemester = loadedSemesters.find((semester) => Number(semester.is_active) === 1);
-        const selected = activeSemester || loadedSemesters[0];
         setSemesters(loadedSemesters);
-        if (selected) {
+        // Default to active semester if available, otherwise show all
+        const activeSemester = loadedSemesters.find((semester) => Number(semester.is_active) === 1);
+        if (activeSemester) {
           setFilters({
-            semesterId: String(selected.id),
-            academicYear: selected.academic_year,
+            semesterId: String(activeSemester.id),
+            academicYear: activeSemester.academic_year,
           });
+        } else {
+          // No active semester — show all data
+          setFilters({ semesterId: "", academicYear: "" });
         }
       } catch (loadError) {
         setError(loadError.response?.data?.message || "Unable to load semesters.");
@@ -55,15 +58,15 @@ const HoDDashboard = () => {
 
   useEffect(() => {
     const loadOverview = async () => {
-      if (!filters.semesterId || !filters.academicYear) {
-        return;
-      }
-
+      // Allow loading with empty semesterId to show all semesters
       setLoading(true);
       setError("");
 
       try {
-        const response = await api.get("/hod/department-overview", { params: filters });
+        const params = {};
+        if (filters.semesterId) params.semesterId = filters.semesterId;
+        if (filters.academicYear) params.academicYear = filters.academicYear;
+        const response = await api.get("/hod/department-overview", { params });
         setOverview(response.data);
       } catch (loadError) {
         setError(loadError.response?.data?.message || "Unable to load department overview.");
@@ -100,11 +103,15 @@ const HoDDashboard = () => {
   };
 
   const handleSemesterChange = (event) => {
-    const selected = semesters.find((semester) => String(semester.id) === event.target.value);
-    setFilters({
-      semesterId: event.target.value,
-      academicYear: selected?.academic_year || "",
-    });
+    if (event.target.value === "") {
+      setFilters({ semesterId: "", academicYear: "" });
+    } else {
+      const selected = semesters.find((semester) => String(semester.id) === event.target.value);
+      setFilters({
+        semesterId: event.target.value,
+        academicYear: selected?.academic_year || "",
+      });
+    }
   };
 
   const handleSort = (key) => {
@@ -150,6 +157,7 @@ const HoDDashboard = () => {
               onChange={handleSemesterChange}
               className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-100"
             >
+              <option value="">All Semesters</option>
               {semesters.map((semester) => (
                 <option key={semester.id} value={semester.id}>
                   {semester.semester_name} - {semester.academic_year}

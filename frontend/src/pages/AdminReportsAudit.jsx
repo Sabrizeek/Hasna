@@ -8,6 +8,7 @@ const AdminReportsAudit = () => {
   const [semesters, setSemesters] = useState([]);
   const [courses, setCourses] = useState([]);
   const [lecturers, setLecturers] = useState([]);
+  const [allUsers, setAllUsers] = useState([]);
   const [reports, setReports] = useState([]);
   const [logs, setLogs] = useState([]);
   const [filters, setFilters] = useState({ departmentId: "", semesterId: "", academicYear: "", role: "", from: "", to: "" });
@@ -74,6 +75,7 @@ const AdminReportsAudit = () => {
       setSemesters(semestersRes.data.semesters || []);
       setReports(reportsRes.data.reports || []);
       setCourses(coursesRes.data.courses || []);
+      setAllUsers(usersRes.data.users || []);
       setLecturers((usersRes.data.users || []).filter((user) => user.role === "lecturer"));
     } catch {
       setReports([]);
@@ -109,6 +111,39 @@ const AdminReportsAudit = () => {
   const handleEvaluationSemester = (value) => {
     const semester = semesters.find((item) => String(item.id) === value);
     setEvaluationFilters((current) => ({ ...current, semesterId: value, academicYear: semester?.academic_year || "" }));
+  };
+
+  const handleDownloadCustomReport = () => {
+    let filteredUsers = allUsers;
+    if (filters.role) {
+      filteredUsers = filteredUsers.filter(u => u.role === filters.role);
+    }
+    if (filters.departmentId) {
+      filteredUsers = filteredUsers.filter(u => String(u.department_id) === filters.departmentId);
+    }
+    if (filters.from) {
+      filteredUsers = filteredUsers.filter(u => new Date(u.created_at) >= new Date(filters.from));
+    }
+    if (filters.to) {
+      const toDate = new Date(filters.to);
+      toDate.setHours(23, 59, 59, 999);
+      filteredUsers = filteredUsers.filter(u => new Date(u.created_at) <= toDate);
+    }
+
+    if (filteredUsers.length === 0) {
+      alert("No users found for the selected criteria.");
+      return;
+    }
+
+    downloadCSV(filteredUsers, "system_users_report.csv", [
+      { header: "Registration ID", key: "university_id" },
+      { header: "Name", key: "full_name" },
+      { header: "Email", key: "email" },
+      { header: "Role", key: (row) => row.role ? row.role.charAt(0).toUpperCase() + row.role.slice(1) : "-" },
+      { header: "Department", key: (row) => row.role === 'student' && row.departmentNames ? row.departmentNames.join(", ") : (row.department_name || "-") },
+      { header: "Status", key: (row) => row.status ? row.status.charAt(0).toUpperCase() + row.status.slice(1) : "-" },
+      { header: "Registered Date", key: (row) => new Date(row.created_at).toLocaleDateString() }
+    ]);
   };
 
   const handleDownloadEvaluationsCSV = () => {
@@ -147,14 +182,14 @@ const AdminReportsAudit = () => {
   return (
     <AdminLayout title="Reports & Audit">
       <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h3 className="text-xl font-bold text-brandBlue">Generate Reports</h3>
-        <div className="mt-5 grid gap-4 md:grid-cols-3 xl:grid-cols-6">
+        <h3 className="text-xl font-bold text-brandBlue">System Users Report</h3>
+        <p className="mt-1 text-sm text-slate-500">Export a list of system users filtered by role, department, and registration date.</p>
+        <div className="mt-5 grid gap-4 md:grid-cols-3 xl:grid-cols-5">
           <select value={filters.role} onChange={(e) => setFilters((c) => ({ ...c, role: e.target.value }))} className="rounded-2xl border border-slate-300 px-4 py-3"><option value="">All roles</option><option value="student">Students</option><option value="lecturer">Lecturers</option></select>
           <select value={filters.departmentId} onChange={(e) => setFilters((c) => ({ ...c, departmentId: e.target.value }))} className="rounded-2xl border border-slate-300 px-4 py-3"><option value="">All departments</option>{departments.map((d) => <option key={d.id} value={d.id}>{d.department_name}</option>)}</select>
-          <select value={filters.semesterId} onChange={(e) => handleSemester(e.target.value)} className="rounded-2xl border border-slate-300 px-4 py-3"><option value="">All semesters</option>{semesters.map((s) => <option key={s.id} value={s.id}>{s.semester_name} - {s.academic_year}</option>)}</select>
           <input type="date" value={filters.from} onChange={(e) => setFilters((c) => ({ ...c, from: e.target.value }))} className="rounded-2xl border border-slate-300 px-4 py-3" />
           <input type="date" value={filters.to} onChange={(e) => setFilters((c) => ({ ...c, to: e.target.value }))} className="rounded-2xl border border-slate-300 px-4 py-3" />
-          <button onClick={handleDownloadEvaluationsCSV} className="rounded-2xl bg-brandBlue px-5 py-3 font-semibold text-white">Export CSV</button>
+          <button onClick={handleDownloadCustomReport} className="rounded-2xl bg-brandBlue px-5 py-3 font-semibold text-white">Export Users CSV</button>
         </div>
       </div>
 

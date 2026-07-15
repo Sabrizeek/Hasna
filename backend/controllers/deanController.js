@@ -79,20 +79,9 @@ export const getFacultyOverview = async (req, res) => {
       facultySubParams
     );
 
-    // departmentsEvaluated — how many departments have at least 1 evaluation in this period
-    const depEvParams = [];
-    const depEvCond = [];
-    if (semId) { depEvCond.push("es.semester_id = ?"); depEvParams.push(semId); }
-    if (acadYear) { depEvCond.push("es.academic_year = ?"); depEvParams.push(acadYear); }
-    const evalWhere = depEvCond.length ? `WHERE ${depEvCond.join(" AND ")}` : "";
-
-    const [departmentRows] = await query(
-      `SELECT COUNT(DISTINCT u.department_id) AS departmentsEvaluated
-       FROM evaluation_submissions es
-       INNER JOIN users u ON es.lecturer_id = u.id
-       ${evalWhere}`,
-      depEvParams
-    );
+    // The previous departmentsEvaluated query only checked student evaluations, which caused 
+    // a mismatch with departmentAverages which includes peer/other scores.
+    // We will calculate it directly from departmentAverages.
 
     // Per-department averages — all sub-queries also get semester filter
     const deptSubParams = [];
@@ -170,7 +159,7 @@ export const getFacultyOverview = async (req, res) => {
         totalLecturers: Number(lecturerRows[0]?.totalLecturers || 0),
         totalEvaluationsCompleted: Number(evaluationRows[0]?.totalEvaluations || 0),
         facultyAverageScore: formatAverage(evaluationRows[0]?.facultyAverageScore),
-        departmentsEvaluated: Number(departmentRows[0]?.departmentsEvaluated || 0),
+        departmentsEvaluated: departmentAverages.filter(d => formatAverage(d.averageScore) > 0 || Number(d.totalEvaluations) > 0).length,
       },
       departmentAverages: departmentAverages.map((department) => ({
         departmentId: department.departmentId,

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import api from "../api/axios.js";
 import AdminLayout from "../components/AdminLayout.jsx";
 import { downloadCSV } from "../utils/csvExport.js";
+import SearchableSelect from "../components/SearchableSelect.jsx";
 
 const emptyCourseForm = {
   course_code: "",
@@ -75,7 +76,8 @@ const ModuleManagement = () => {
     return courses.filter((course) => {
       const matchesSearch =
         course.course_code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        course.course_name.toLowerCase().includes(searchQuery.toLowerCase());
+        course.course_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        assignments.some(a => a.course_id === course.id && a.lecturer_name.toLowerCase().includes(searchQuery.toLowerCase()));
       
       const matchesDepartment = filterDepartment
         ? String(course.department_id) === filterDepartment
@@ -260,12 +262,14 @@ const ModuleManagement = () => {
                 {courseForm.assignments.map((assignment, index) => (
                   <div key={index} className="flex flex-wrap md:flex-nowrap gap-4 items-center bg-slate-50 p-4 rounded-2xl border border-slate-200 shadow-sm animate-in fade-in zoom-in-95">
                     <div className="flex-1 min-w-[200px]">
-                      <select value={assignment.lecturerId} onChange={(e) => updateAssignment(index, 'lecturerId', e.target.value)} className="w-full rounded-xl border border-slate-300 px-4 py-2.5 bg-white" required>
-                        <option value="">Choose lecturer...</option>
-                        {lecturers.filter(l => l.department_id === Number(courseForm.department_id)).map(l => (
-                          <option key={l.id} value={l.id}>{l.full_name}</option>
-                        ))}
-                      </select>
+                      <SearchableSelect
+                        value={assignment.lecturerId}
+                        onChange={(e) => updateAssignment(index, 'lecturerId', e.target.value)}
+                        placeholder="Choose lecturer..."
+                        options={lecturers
+                          .filter(l => l.department_id === Number(courseForm.department_id))
+                          .map(l => ({ label: l.full_name, value: l.id }))}
+                      />
                     </div>
                     <div className="flex gap-4 items-center whitespace-nowrap px-2">
                       <label className="flex items-center gap-2 cursor-pointer">
@@ -309,7 +313,7 @@ const ModuleManagement = () => {
               <div className="flex flex-col sm:flex-row gap-2 w-full xl:w-auto">
                 <input
                   type="text"
-                  placeholder="Search by code or name..."
+                  placeholder="Search by code, module, or lecturer name..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full sm:w-64 rounded-2xl border border-slate-300 px-4 py-2 text-sm focus:border-brandBlue focus:outline-none transition"

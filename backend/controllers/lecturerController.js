@@ -287,6 +287,11 @@ export const uploadSupervisionReport = async (req, res) => {
       return res.status(400).json({ message: "Report title is required." });
     }
 
+    // Multer v2: fileFilter rejection is stored in req.fileValidationError
+    if (req.fileValidationError) {
+      return res.status(400).json({ message: req.fileValidationError });
+    }
+
     if (!req.file) {
       return res.status(400).json({ message: "Please upload a PDF, DOC, or DOCX report." });
     }
@@ -319,6 +324,7 @@ export const uploadSupervisionReport = async (req, res) => {
     res.status(500).json({ message: "Failed to upload supervision report.", error: error.message });
   }
 };
+
 
 export const downloadSupervisionReport = async (req, res) => {
   try {
@@ -408,9 +414,15 @@ export const uploadPeerEvaluation = async (req, res) => {
       return res.status(400).json({ message: "Valid assignment is required." });
     }
 
+    // Multer v2: fileFilter rejection is stored in req.fileValidationError
+    if (req.fileValidationError) {
+      return res.status(400).json({ message: req.fileValidationError });
+    }
+
     if (!req.file) {
       return res.status(400).json({ message: "Please upload a valid document (PDF, JPG, PNG)." });
     }
+
 
     const [assignments] = await query(
       `SELECT id, evaluated_id FROM peer_evaluation_assignments 
