@@ -135,15 +135,15 @@ const Login = () => {
 
       <form id="loginForm" onSubmit={handleSubmit} autoComplete="on">
         <div className="field">
-          <label htmlFor="idField" id="idLabel">University ID</label>
+          <label htmlFor="idField" id="idLabel">{isStudent ? 'University ID' : 'University ID or Email'}</label>
           <input 
             type="text" 
             id="idField" 
             name="identifier" 
-            placeholder={isStudent ? 'e.g. SC/2021/00123' : 'e.g. R012345'} 
+            placeholder={isStudent ? 'e.g. SC/2021/00123' : 'e.g. R012345 or email'} 
             required 
-            pattern={isStudent ? '^SC/20\\d{2}/\\d{5}$' : '^R\\d{6}$'}
-            title={isStudent ? 'Format: SC/20xx/xxxxx' : 'Format: Rxxxxxx'} 
+            pattern={isStudent ? '^SC/20\\d{2}/\\d{5}$' : '^([a-zA-Z0-9]{3,}|[a-zA-Z0-9._%+\\-]+@[a-zA-Z0-9.\\-]+\\.[a-zA-Z]{2,})$'}
+            title={isStudent ? 'Format: SC/20xx/xxxxx' : 'Format: Valid ID or Email address'} 
             value={formData.identifier}
             onChange={handleChange}
           />
