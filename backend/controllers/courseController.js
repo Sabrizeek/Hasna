@@ -25,6 +25,12 @@ export const createCourse = async (req, res) => {
     const [[semester]] = await connection.execute("SELECT academic_year FROM semesters WHERE id = ?", [semester_id]);
     const academicYear = semester ? semester.academic_year : "2023/2024";
 
+    const [existing] = await connection.execute("SELECT id FROM courses WHERE course_code = ?", [course_code]);
+    if (existing.length > 0) {
+      await connection.rollback();
+      return res.status(400).json({ message: `A module with the code ${course_code} already exists. Please search for it and edit it instead.` });
+    }
+
     const [result] = await connection.execute(
       "INSERT INTO courses (course_code, course_name, department_id, semester_id, is_core) VALUES (?, ?, ?, ?, ?)",
       [course_code, course_name, department_id, semester_id, is_core !== undefined ? is_core : 1]

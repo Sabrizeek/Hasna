@@ -98,7 +98,31 @@ const ModuleManagement = () => {
   /* ================= COURSE MANAGEMENT ================= */
   const handleCourseChange = (event) => {
     const value = event.target.type === 'checkbox' ? (event.target.checked ? 1 : 0) : event.target.value;
-    setCourseForm({ ...courseForm, [event.target.name]: value });
+    const name = event.target.name;
+
+    if (name === 'course_code') {
+      const existingCourse = courses.find(c => c.course_code.toLowerCase() === value.toLowerCase());
+      if (existingCourse && existingCourse.id !== editingCourseId) {
+        const courseAssignments = assignments.filter(a => a.course_id === existingCourse.id).map(a => ({
+          lecturerId: String(a.lecturer_id),
+          typeTheory: a.type === 'theory' || a.type === 'both',
+          typePractical: a.type === 'practical' || a.type === 'both',
+        }));
+        
+        setEditingCourseId(existingCourse.id);
+        setCourseForm({
+          course_code: value,
+          course_name: existingCourse.course_name,
+          department_id: String(existingCourse.department_id),
+          semester_id: String(existingCourse.semester_id),
+          is_core: existingCourse.is_core !== undefined ? Number(existingCourse.is_core) : 1,
+          assignments: courseAssignments,
+        });
+        return;
+      }
+    }
+
+    setCourseForm(prev => ({ ...prev, [name]: value }));
   };
 
   const addAssignment = () => {
