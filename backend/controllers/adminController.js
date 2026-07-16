@@ -456,35 +456,39 @@ export const deleteUser = async (req, res) => {
 
 export const getDashboardStats = async (req, res) => {
   try {
-    const { activityFilter } = req.query;
+    const { activityFilter } = req.query; // This will now be semester_id
     
     let monthlyActivityQuery = `
         SELECT MONTH(submitted_at) as month, COUNT(*) as count 
         FROM evaluation_submissions 
-        WHERE academic_year = (SELECT academic_year FROM semesters WHERE is_active = 1 LIMIT 1)
+        WHERE semester_id = ?
         GROUP BY MONTH(submitted_at)
         ORDER BY month ASC
     `;
+    let queryParams = [activityFilter];
     
-    if (activityFilter === "All Time") {
+    if (!activityFilter || activityFilter === "active") {
       monthlyActivityQuery = `
         SELECT MONTH(submitted_at) as month, COUNT(*) as count 
         FROM evaluation_submissions 
+        WHERE semester_id = (SELECT id FROM semesters WHERE is_active = 1 LIMIT 1)
         GROUP BY MONTH(submitted_at)
         ORDER BY month ASC
       `;
-    } else if (activityFilter === "Last Academic Year") {
-      monthlyActivityQuery = `
-        SELECT MONTH(submitted_at) as month, COUNT(*) as count 
-        FROM evaluation_submissions 
-        WHERE academic_year = (
-          SELECT DISTINCT academic_year FROM semesters 
-          WHERE academic_year != (SELECT academic_year FROM semesters WHERE is_active = 1 LIMIT 1) 
-          ORDER BY academic_year DESC LIMIT 1
-        )
-        GROUP BY MONTH(submitted_at)
-        ORDER BY month ASC
-      `;
+      queryParams = [];
+    }
+
+    let kpiWhereClause = "WHERE 1=1";
+    let kpiWindowClause = "WHERE 1=1";
+    let kpiParams = [];
+
+    if (!activityFilter || activityFilter === "active") {
+      kpiWhereClause = "WHERE es.semester_id = (SELECT id FROM semesters WHERE is_active = 1 LIMIT 1)";
+      kpiWindowClause = "WHERE l.semester_id = (SELECT id FROM semesters WHERE is_active = 1 LIMIT 1)";
+    } else {
+      kpiWhereClause = "WHERE es.semester_id = ?";
+      kpiWindowClause = "WHERE l.semester_id = ?";
+      kpiParams = [activityFilter];
     }
 
     await syncEvaluationWindowStatuses();
@@ -501,6 +505,7 @@ export const getDashboardStats = async (req, res) => {
       [monthlyActivityRows],
       [recentReports],
       [recentActivity],
+      [availableSemestersRow],
     ] = await Promise.all([
       query("SELECT COUNT(*) AS count FROM users WHERE role = 'student' AND deleted_at IS NULL"),
       query("SELECT COUNT(*) AS count FROM users WHERE role = 'lecturer' AND status = 'approved' AND deleted_at IS NULL"),
@@ -508,17 +513,15 @@ export const getDashboardStats = async (req, res) => {
       query(`
         SELECT COUNT(*) AS count 
         FROM evaluation_submissions es
-        JOIN evaluation_windows ew ON ew.semester_id = es.semester_id AND ew.academic_year = es.academic_year
-        WHERE ew.status = 'open' AND ew.open_date <= NOW() AND ew.close_date > NOW()
-      `),
+        ${kpiWhereClause}
+      `, kpiParams),
       query("SELECT COUNT(*) AS count FROM evaluation_windows WHERE status = 'open' AND open_date <= NOW() AND close_date > NOW()"),
       query("SELECT COUNT(*) AS count FROM supervision_reports WHERE status IN ('submitted', 'under_review')"),
       query(`
         SELECT COUNT(DISTINCT es.lecturer_id) AS count
         FROM evaluation_submissions es
-        JOIN evaluation_windows ew ON ew.semester_id = es.semester_id AND ew.academic_year = es.academic_year
-        WHERE ew.status = 'open' AND ew.open_date <= NOW() AND ew.close_date > NOW()
-      `),
+        ${kpiWhereClause}
+      `, kpiParams),
       query(`
         SELECT SUM(CASE WHEN l.type = 'both' THEN 2 ELSE 1 END) AS count
         FROM student_courses sc
@@ -535,17 +538,15 @@ export const getDashboardStats = async (req, res) => {
           JOIN users u ON lm.lecturer_id = u.id
           WHERE u.role = 'lecturer' AND u.status = 'approved' AND u.deleted_at IS NULL
         ) l ON sc.course_id = l.course_id AND sc.semester_id = l.semester_id
-        JOIN evaluation_windows ew ON ew.semester_id = l.semester_id AND ew.academic_year = l.academic_year
-        WHERE ew.status = 'open' AND ew.open_date <= NOW() AND ew.close_date > NOW()
-      `),
+        ${kpiWindowClause}
+      `, kpiParams),
       query(`
         SELECT AVG(r.score) AS average
         FROM evaluation_responses r
-        JOIN evaluation_submissions s ON r.submission_id = s.id
-        JOIN evaluation_windows ew ON s.semester_id = ew.semester_id AND s.academic_year = s.academic_year
-        WHERE ew.status = 'open' AND ew.open_date <= NOW() AND ew.close_date > NOW()
-      `),
-      query(monthlyActivityQuery),
+        JOIN evaluation_submissions es ON r.submission_id = es.id
+        ${kpiWhereClause}
+      `, kpiParams),
+      query(monthlyActivityQuery, queryParams),
       query(
         `SELECT sr.id, sr.title, sr.status, sr.submitted_at, u.full_name AS lecturer_name
          FROM supervision_reports sr
@@ -560,6 +561,11 @@ export const getDashboardStats = async (req, res) => {
          ORDER BY al.created_at DESC
          LIMIT 5`
       ),
+      query(`
+        SELECT id, semester_name, academic_year, is_active 
+        FROM semesters 
+        ORDER BY created_at DESC
+      `),
     ]);
 
     const completed = Number(submissionsActive[0]?.count || 0);
@@ -579,6 +585,11 @@ export const getDashboardStats = async (req, res) => {
     });
 
     res.json({
+      availableSemesters: availableSemestersRow.map(r => ({
+        id: r.id,
+        name: `${r.semester_name} (${r.academic_year})`,
+        isActive: r.is_active
+      })),
       stats: {
         totalStudents: Number(students[0]?.count || 0),
         totalLecturers: totalLecs,
@@ -1012,10 +1023,11 @@ export const revokeAccessToken = async (req, res) => {
 export const getAdminSupervisionReports = async (req, res) => {
   try {
     const [reports] = await query(
-      `SELECT sr.*, u.full_name AS lecturer_name, d.department_name
+      `SELECT sr.*, u.full_name AS lecturer_name, d.department_name, s.semester_name
        FROM supervision_reports sr
        INNER JOIN users u ON sr.lecturer_id = u.id
        LEFT JOIN departments d ON u.department_id = d.id
+       LEFT JOIN semesters s ON sr.semester_id = s.id
        ORDER BY sr.submitted_at DESC`
     );
     res.json({ reports });

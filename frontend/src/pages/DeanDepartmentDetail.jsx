@@ -37,7 +37,6 @@ const DeanDepartmentDetail = () => {
 
   useEffect(() => {
     const loadDetails = async () => {
-      if (!filters.semesterId || !filters.academicYear) return;
       setLoading(true);
       setError("");
       try {
@@ -181,10 +180,10 @@ const DeanDepartmentDetail = () => {
                     <td className="px-5 py-4 font-semibold text-slate-950">{lecturer.name}</td>
                     <td className="px-5 py-4 text-slate-600">{lecturer.department}</td>
                     <td className="px-5 py-4 text-slate-600">{lecturer.studentEvaluationScore ? `${lecturer.studentEvaluationScore}%` : "-"}</td>
-                    <td className="px-5 py-4 font-bold text-orange-700">{lecturer.peerEvaluationScore ? `${lecturer.peerEvaluationScore}` : "-"}</td>
-                    <td className="px-5 py-4 text-slate-600">{lecturer.mentoringScore ? `${lecturer.mentoringScore}` : "-"}</td>
-                    <td className="px-5 py-4 text-slate-600">{lecturer.supervisionScore ? `${lecturer.supervisionScore}` : "-"}</td>
-                    <td className="px-5 py-4 text-slate-600">{lecturer.otherScore ? `${lecturer.otherScore}` : "-"}</td>
+                    <td className="px-5 py-4 font-bold text-orange-700">{lecturer.peerEvaluationScore ? `${lecturer.peerEvaluationScore}%` : "-"}</td>
+                    <td className="px-5 py-4 text-slate-600">{lecturer.mentoringScore ? `${lecturer.mentoringScore}%` : "-"}</td>
+                    <td className="px-5 py-4 text-slate-600">{lecturer.supervisionScore ? `${lecturer.supervisionScore}%` : "-"}</td>
+                    <td className="px-5 py-4 text-slate-600">{lecturer.otherScore ? `${lecturer.otherScore}%` : "-"}</td>
                     <td className="px-5 py-4 text-slate-600">{lecturer.totalEvaluations}</td>
                     <td className="px-5 py-4 font-bold text-brandBlue">{lecturer.overallScore ? `${lecturer.overallScore}%` : "-"}</td>
                     <td className="w-32 px-5 py-4 whitespace-nowrap">

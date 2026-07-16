@@ -20,6 +20,8 @@ const formatStatus = (status) => status.replace("_", " ");
 
 const LecturerSupervisionReports = () => {
   const [reports, setReports] = useState([]);
+  const [activeSemesters, setActiveSemesters] = useState([]);
+  const [selectedSemesterId, setSelectedSemesterId] = useState("");
   const [title, setTitle] = useState("");
   const [reportType, setReportType] = useState("supervision");
   const [otherCategory, setOtherCategory] = useState("");
@@ -41,8 +43,22 @@ const LecturerSupervisionReports = () => {
     }
   };
 
+  const loadActiveSemesters = async () => {
+    try {
+      const response = await api.get("/lecturer/active-semesters");
+      const semesters = response.data.semesters || [];
+      setActiveSemesters(semesters);
+      if (semesters.length > 0) {
+        setSelectedSemesterId(semesters[0].id.toString());
+      }
+    } catch {
+      // non-fatal
+    }
+  };
+
   useEffect(() => {
     loadReports();
+    loadActiveSemesters();
   }, []);
 
   const handleFileChange = (event) => {
@@ -91,6 +107,9 @@ const LecturerSupervisionReports = () => {
     }
 
     const formData = new FormData();
+    if (selectedSemesterId) {
+      formData.append("semesterId", selectedSemesterId);
+    }
     formData.append("title", title.trim());
     formData.append("reportType", reportType);
     if (reportType === "other") {
@@ -159,6 +178,23 @@ const LecturerSupervisionReports = () => {
         </div>
 
         <form onSubmit={handleUpload} className="mt-8 rounded-3xl border border-slate-200 bg-slate-50 p-5">
+          {activeSemesters.length > 0 ? (
+            <div className="mb-4">
+              <label className="text-sm font-semibold text-slate-700 mb-2 block">Select Semester</label>
+              <div className="w-full md:w-1/2">
+                <SearchableSelect
+                  value={selectedSemesterId}
+                  onChange={(e) => setSelectedSemesterId(e.target.value)}
+                  options={activeSemesters.map(s => ({ value: s.id.toString(), label: `${s.semester_name} — ${s.academic_year}` }))}
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="mb-4 flex items-center gap-2 rounded-2xl bg-amber-50 border border-amber-200 px-4 py-3">
+              <svg className="h-4 w-4 text-amber-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              <span className="text-sm text-amber-700">No active semester found. Your report will still be saved but may not be linked to a semester.</span>
+            </div>
+          )}
           <div className="grid gap-5 lg:grid-cols-[1fr_1fr]">
             <label className="space-y-2">
               <span className="text-sm font-semibold text-slate-700">Report Title</span>
@@ -237,6 +273,7 @@ const LecturerSupervisionReports = () => {
                 <thead className="sticky top-0 z-10 bg-slate-50 text-slate-500">
                   <tr>
                     <th className="px-5 py-3 font-semibold">Report Title</th>
+                    <th className="px-5 py-3 font-semibold">Academic Year / Semester</th>
                     <th className="px-5 py-3 font-semibold">Type</th>
                     <th className="px-5 py-3 font-semibold">Submitted Date</th>
                     <th className="px-5 py-3 font-semibold">Status</th>
@@ -248,6 +285,12 @@ const LecturerSupervisionReports = () => {
                   {reports.map((report) => (
                     <tr key={report.id} className="border-t border-slate-100">
                       <td className="px-5 py-4 font-semibold text-slate-900">{report.title}</td>
+                      <td className="px-5 py-4 text-slate-500 whitespace-nowrap text-xs">
+                        {report.academic_year
+                          ? <span className="rounded-full bg-sky-50 border border-sky-200 px-3 py-1 text-sky-700 font-semibold">{report.academic_year} — {report.semester_name || "Unknown"}</span>
+                          : <span className="text-slate-400">—</span>
+                        }
+                      </td>
                       <td className="px-5 py-4 text-slate-600 capitalize">
                         {report.report_type} {report.other_category ? `(${report.other_category.replace('_', ' ')})` : ''}
                       </td>

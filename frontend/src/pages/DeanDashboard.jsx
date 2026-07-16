@@ -23,6 +23,7 @@ const DeanDashboard = () => {
   const [overview, setOverview] = useState(null);
   const [semesters, setSemesters] = useState([]);
   const [filters, setFilters] = useState({ semesterId: "", academicYear: "" });
+  const [isSemestersLoaded, setIsSemestersLoaded] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -57,6 +58,8 @@ const DeanDashboard = () => {
       } catch (loadError) {
         setError(loadError.response?.data?.message || "Unable to load semesters.");
         setLoading(false);
+      } finally {
+        setIsSemestersLoaded(true);
       }
     };
 
@@ -64,22 +67,32 @@ const DeanDashboard = () => {
   }, []);
 
   useEffect(() => {
+    if (!isSemestersLoaded) return;
+    
+    const controller = new AbortController();
     const loadOverview = async () => {
       // Allow loading with empty semesterId to show all semesters
       setLoading(true);
       setError("");
       try {
-        const response = await api.get("/dean/faculty-overview", { params: filters });
-        setOverview(response.data);
+        const response = await api.get("/dean/faculty-overview", { params: filters, signal: controller.signal });
+        if (!controller.signal.aborted) {
+          setOverview(response.data);
+        }
       } catch (loadError) {
-        setError(loadError.response?.data?.message || "Unable to load faculty overview.");
+        if (!controller.signal.aborted) {
+          setError(loadError.response?.data?.message || "Unable to load faculty overview.");
+        }
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
       }
     };
 
     loadOverview();
-  }, [filters]);
+    return () => controller.abort();
+  }, [filters, isSemestersLoaded]);
 
   const chartData = useMemo(() => ({
     labels: (overview?.departmentAverages || []).map((department) => department.departmentName),
@@ -122,7 +135,7 @@ const DeanDashboard = () => {
   const kpiCards = [
     ["Total Lecturers", overview?.kpis?.totalLecturers || 0],
     ["Total Evaluations Completed", overview?.kpis?.totalEvaluationsCompleted || 0],
-    ["Faculty Average Score", overview?.kpis?.facultyAverageScore != null ? `${overview.kpis.facultyAverageScore}%` : "0%"],
+    ["Faculty Average Score", overview?.kpis?.facultyAverageScore != null ? overview.kpis.facultyAverageScore : "0"],
     ["Departments Evaluated", overview?.kpis?.departmentsEvaluated || 0],
   ];
 
@@ -136,7 +149,7 @@ const DeanDashboard = () => {
           <div key={`${title}-${item.lecturerId}`} className="rounded-2xl bg-slate-50 p-4">
             <p className="font-bold text-slate-950">{item.name}</p>
             <p className="mt-1 text-sm text-slate-600">{item.departmentName}</p>
-            <p className="mt-2 text-2xl font-bold text-orange-700">{item.averageScore != null ? `${item.averageScore}%` : "-"}</p>
+            <p className="mt-2 text-2xl font-bold text-orange-700">{item.averageScore != null ? item.averageScore : "-"}</p>
           </div>
         ))}
       </div>
@@ -231,8 +244,15 @@ const DeanDashboard = () => {
                 className="rounded-2xl border border-orange-100 bg-white p-4 transition hover:border-orange-300 hover:bg-orange-50"
               >
                 <p className="font-bold text-slate-950">{department.departmentName}</p>
-                <p className="mt-1 text-sm text-slate-600">{department.totalEvaluations} evaluations</p>
-                <p className="mt-2 text-2xl font-bold text-orange-700">{department.averageScore != null ? `${department.averageScore}%` : "-"}</p>
+                <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-600">
+                  <span>{department.totalEvaluations} evaluations</span>
+                  <span>•</span>
+                  <span>{department.mentoringCount || 0} mentoring</span>
+                  <span>•</span>
+                  <span>{department.supervisionCount || 0} supervision</span>
+                  <span>•</span>
+                  <span>{department.otherCount || 0} other</span>
+                </div>
               </Link>
             ))}
           </div>

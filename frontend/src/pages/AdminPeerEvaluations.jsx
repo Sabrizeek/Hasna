@@ -431,7 +431,7 @@ const AdminPeerEvaluations = () => {
             />
           </div>
 
-          <div className="mt-6 max-h-[20rem] overflow-y-auto overflow-x-auto">
+          <div className="mt-6 max-h-[40rem] overflow-y-auto overflow-x-auto">
             <table className="w-full table-auto divide-y divide-slate-200 text-left text-sm [&_td]:px-2 [&_th]:px-2" style={{minWidth:'560px'}}>
               <thead className="sticky top-0 z-10 bg-white text-slate-500 border-b border-slate-200">
                 <tr>

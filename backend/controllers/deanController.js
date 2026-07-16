@@ -83,21 +83,31 @@ export const getFacultyOverview = async (req, res) => {
     // a mismatch with departmentAverages which includes peer/other scores.
     // We will calculate it directly from departmentAverages.
 
-    // Per-department averages — all sub-queries also get semester filter
-    const deptSubParams = [];
-    if (semId) deptSubParams.push(semId, semId, semId, semId, semId);
-    if (semId) deptSubParams.push(semId); // outer es join
-    if (acadYear) deptSubParams.push(acadYear); // outer es join academic_year
-    const deptEsOuterWhere = semId ? `AND es.semester_id = ?` : "";
-    const deptEsAcadWhere = acadYear ? `AND es.academic_year = ?` : "";
-    // params are repeated per sub-select and then the outer join
     const allDeptParams = [];
-    if (semId) allDeptParams.push(semId, semId, semId, semId, semId, semId);
+    if (semId) allDeptParams.push(semId);
     if (acadYear) allDeptParams.push(acadYear);
+    if (semId) allDeptParams.push(semId);
+    if (acadYear) allDeptParams.push(acadYear);
+    if (semId) allDeptParams.push(semId, semId, semId, semId, semId);
 
     const [departmentAverages] = await query(
-      `SELECT d.id AS departmentId, d.department_name AS departmentName,
-              COUNT(es.id) AS totalEvaluations,
+      `WITH DeptCounts AS (
+          SELECT u.department_id,
+                 COUNT(DISTINCT es.id) AS totalEvaluations,
+                 COUNT(DISTINCT CASE WHEN sr.report_type = 'mentoring' THEN sr.id END) AS mentoringCount,
+                 COUNT(DISTINCT CASE WHEN sr.report_type = 'supervision' THEN sr.id END) AS supervisionCount,
+                 COUNT(DISTINCT CASE WHEN sr.report_type = 'other' THEN sr.id END) AS otherCount
+          FROM users u
+          LEFT JOIN evaluation_submissions es ON es.lecturer_id = u.id ${semId ? "AND es.semester_id = ?" : ""} ${acadYear ? "AND es.academic_year = ?" : ""}
+          LEFT JOIN supervision_reports sr ON sr.lecturer_id = u.id ${semId ? "AND sr.semester_id = ?" : ""} ${acadYear ? "AND sr.academic_year = ?" : ""}
+          WHERE u.role = 'lecturer' AND u.status = 'approved'
+          GROUP BY u.department_id
+       )
+       SELECT d.id AS departmentId, d.department_name AS departmentName,
+              COALESCE(c.totalEvaluations, 0) AS totalEvaluations,
+              COALESCE(c.mentoringCount, 0) AS mentoringCount,
+              COALESCE(c.supervisionCount, 0) AS supervisionCount,
+              COALESCE(c.otherCount, 0) AS otherCount,
               ROUND(
                 AVG(
                   (COALESCE((SELECT AVG(sub.overall_grade) FROM evaluation_submissions sub WHERE sub.lecturer_id = u.id ${subEvalWhere}), 0) * 0.50) +
@@ -109,9 +119,9 @@ export const getFacultyOverview = async (req, res) => {
                 1
               ) AS averageScore
        FROM departments d
+       LEFT JOIN DeptCounts c ON c.department_id = d.id
        LEFT JOIN users u ON u.department_id = d.id AND u.role = 'lecturer' AND u.status = 'approved'
-       LEFT JOIN evaluation_submissions es ON es.lecturer_id = u.id ${semId ? "AND es.semester_id = ?" : ""} ${acadYear ? "AND es.academic_year = ?" : ""}
-       GROUP BY d.id, d.department_name
+       GROUP BY d.id, d.department_name, c.totalEvaluations, c.mentoringCount, c.supervisionCount, c.otherCount
        ORDER BY averageScore DESC, d.department_name ASC`,
       allDeptParams
     );
@@ -166,6 +176,9 @@ export const getFacultyOverview = async (req, res) => {
         departmentName: department.departmentName,
         averageScore: formatAverage(department.averageScore),
         totalEvaluations: Number(department.totalEvaluations || 0),
+        mentoringCount: Number(department.mentoringCount || 0),
+        supervisionCount: Number(department.supervisionCount || 0),
+        otherCount: Number(department.otherCount || 0),
       })),
       topPerformers: performerRows.slice(0, 3).map(normalizePerformer),
       needsAttention: [...performerRows].reverse().slice(0, 3).map(normalizePerformer),
@@ -345,11 +358,12 @@ export const getDeanLecturerDetails = async (req, res) => {
     };
 
     const [reports] = await query(
-      `SELECT id, title, file_name, file_type, file_size, status, admin_comment, reviewed_at, submitted_at, report_type
+      `SELECT id, title, file_name, file_type, file_size, status, admin_comment, reviewed_at, submitted_at, report_type, semester_id, academic_year
        FROM supervision_reports
        WHERE lecturer_id = ?
+       ${filters.semesterId ? "AND (semester_id = ? OR semester_id IS NULL)" : ""}
        ORDER BY submitted_at DESC`,
-      [lecturerId]
+      filters.semesterId ? [lecturerId, filters.semesterId] : [lecturerId]
     );
 
     const [peerEvaluations] = await query(

@@ -29,6 +29,7 @@ const HoDDashboard = () => {
   const [overview, setOverview] = useState(null);
   const [semesters, setSemesters] = useState([]);
   const [filters, setFilters] = useState({ semesterId: "", academicYear: "" });
+  const [isSemestersLoaded, setIsSemestersLoaded] = useState(false);
   const [sortConfig, setSortConfig] = useState({ key: "overallScore", direction: "desc" });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -64,6 +65,8 @@ const HoDDashboard = () => {
       } catch (loadError) {
         setError(loadError.response?.data?.message || "Unable to load semesters.");
         setLoading(false);
+      } finally {
+        setIsSemestersLoaded(true);
       }
     };
 
@@ -71,6 +74,9 @@ const HoDDashboard = () => {
   }, []);
 
   useEffect(() => {
+    if (!isSemestersLoaded) return;
+    
+    const controller = new AbortController();
     const loadOverview = async () => {
       // Allow loading with empty semesterId to show all semesters
       setLoading(true);
@@ -80,17 +86,24 @@ const HoDDashboard = () => {
         const params = {};
         if (filters.semesterId) params.semesterId = filters.semesterId;
         if (filters.academicYear) params.academicYear = filters.academicYear;
-        const response = await api.get("/hod/department-overview", { params });
-        setOverview(response.data);
+        const response = await api.get("/hod/department-overview", { params, signal: controller.signal });
+        if (!controller.signal.aborted) {
+          setOverview(response.data);
+        }
       } catch (loadError) {
-        setError(loadError.response?.data?.message || "Unable to load department overview.");
+        if (!controller.signal.aborted) {
+          setError(loadError.response?.data?.message || "Unable to load department overview.");
+        }
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
       }
     };
 
     loadOverview();
-  }, [filters]);
+    return () => controller.abort();
+  }, [filters, isSemestersLoaded]);
 
   const sortedLecturers = useMemo(() => {
     const lecturers = [...(overview?.lecturers || [])];
@@ -264,10 +277,10 @@ const HoDDashboard = () => {
                     <td className="px-5 py-4 font-semibold text-slate-950">{lecturer.name}</td>
                     <td className="px-5 py-4 text-slate-600">{lecturer.modules.join(", ") || "No modules"}</td>
                     <td className="px-5 py-4 text-slate-600">{lecturer.studentEvaluationScore ? `${lecturer.studentEvaluationScore}%` : "-"}</td>
-                    <td className="px-5 py-4 font-bold text-brandBlue">{lecturer.peerEvaluationScore ? `${lecturer.peerEvaluationScore}` : "-"}</td>
-                    <td className="px-5 py-4 text-slate-600">{lecturer.mentoringScore ? `${lecturer.mentoringScore}` : "-"}</td>
-                    <td className="px-5 py-4 text-slate-600">{lecturer.supervisionScore ? `${lecturer.supervisionScore}` : "-"}</td>
-                    <td className="px-5 py-4 text-slate-600">{lecturer.otherScore ? `${lecturer.otherScore}` : "-"}</td>
+                    <td className="px-5 py-4 font-bold text-brandBlue">{lecturer.peerEvaluationScore ? `${lecturer.peerEvaluationScore}%` : "-"}</td>
+                    <td className="px-5 py-4 text-slate-600">{lecturer.mentoringScore ? `${lecturer.mentoringScore}%` : "-"}</td>
+                    <td className="px-5 py-4 text-slate-600">{lecturer.supervisionScore ? `${lecturer.supervisionScore}%` : "-"}</td>
+                    <td className="px-5 py-4 text-slate-600">{lecturer.otherScore ? `${lecturer.otherScore}%` : "-"}</td>
                     <td className="px-5 py-4 text-slate-600">{lecturer.reportsSubmitted}</td>
                     <td className="px-5 py-4 font-bold text-amber-700">{lecturer.overallScore ? `${lecturer.overallScore}%` : "-"}</td>
                     <td className="w-40 px-5 py-4 whitespace-nowrap">

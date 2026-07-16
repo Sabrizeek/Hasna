@@ -279,11 +279,12 @@ export const getHodLecturerDetails = async (req, res) => {
     };
 
     const [reports] = await query(
-      `SELECT id, title, file_name, file_type, file_size, status, admin_comment, reviewed_at, submitted_at, report_type
+      `SELECT id, title, file_name, file_type, file_size, status, admin_comment, reviewed_at, submitted_at, report_type, semester_id, academic_year
        FROM supervision_reports
        WHERE lecturer_id = ?
+       ${filters.semesterId ? "AND (semester_id = ? OR semester_id IS NULL)" : ""}
        ORDER BY submitted_at DESC`,
-      [lecturerId]
+      filters.semesterId ? [lecturerId, filters.semesterId] : [lecturerId]
     );
 
     const [peerEvaluations] = await query(

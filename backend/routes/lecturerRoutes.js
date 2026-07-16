@@ -6,6 +6,7 @@ import {
   downloadSupervisionReport,
   getEvaluationResults,
   getLecturerModules,
+  getActiveSemesters,
   getSupervisionReports,
   summarizeLecturerComments,
   uploadSupervisionReport,
@@ -19,6 +20,7 @@ const router = Router();
 router.use(requireAuth, requireRole("lecturer"));
 
 router.get("/modules", getLecturerModules);
+router.get("/active-semesters", getActiveSemesters);
 router.get("/evaluation-results/:courseId", getEvaluationResults);
 router.post("/comments/summarize", summarizeLecturerComments);
 router.get("/supervision-reports", getSupervisionReports);

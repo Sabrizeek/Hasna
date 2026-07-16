@@ -72,6 +72,17 @@ export const getLecturerModules = async (req, res) => {
   }
 };
 
+export const getActiveSemesters = async (req, res) => {
+  try {
+    const [semesters] = await query(
+      "SELECT id, semester_name, academic_year FROM semesters WHERE is_active = 1 ORDER BY academic_year DESC, semester_name ASC"
+    );
+    res.json({ semesters });
+  } catch (error) {
+    res.status(500).json({ message: "Failed to fetch active semesters.", error: error.message });
+  }
+};
+
 export const getEvaluationResults = async (req, res) => {
   try {
     const lecturerId = req.user.id;
@@ -259,12 +270,14 @@ export const summarizeLecturerComments = async (req, res) => {
 export const getSupervisionReports = async (req, res) => {
   try {
     const [reports] = await query(
-      `SELECT id, title, file_name, file_type, file_size, status,
-              report_type, other_category,
-              admin_comment, reviewed_at, submitted_at
-       FROM supervision_reports
-       WHERE lecturer_id = ?
-       ORDER BY submitted_at DESC`,
+      `SELECT sr.id, sr.title, sr.file_name, sr.file_type, sr.file_size, sr.status,
+              sr.report_type, sr.other_category,
+              sr.semester_id, sr.academic_year, s.semester_name,
+              sr.admin_comment, sr.reviewed_at, sr.submitted_at
+       FROM supervision_reports sr
+       LEFT JOIN semesters s ON sr.semester_id = s.id
+       WHERE sr.lecturer_id = ?
+       ORDER BY sr.submitted_at DESC`,
       [req.user.id]
     );
 
@@ -296,13 +309,36 @@ export const uploadSupervisionReport = async (req, res) => {
       return res.status(400).json({ message: "Please upload a PDF, DOC, or DOCX report." });
     }
 
+    // Find the chosen semester or fallback to the most recent active semester if not provided
+    const requestedSemesterId = parseInt(req.body.semesterId, 10);
+    let semesterQuery = "SELECT id, academic_year, semester_name FROM semesters WHERE is_active = 1 ";
+    let queryParams = [];
+    if (requestedSemesterId) {
+      semesterQuery += "AND id = ?";
+      queryParams.push(requestedSemesterId);
+    } else {
+      semesterQuery += "ORDER BY created_at DESC LIMIT 1";
+    }
+
+    const [activeSemesters] = await query(semesterQuery, queryParams);
+    
+    // If a specific ID was requested but not found/active, reject
+    if (requestedSemesterId && activeSemesters.length === 0) {
+      if (req.file?.path) fs.unlink(req.file.path, () => {});
+      return res.status(400).json({ message: "Selected semester is invalid or not currently active." });
+    }
+
+    const activeSemester = activeSemesters[0] || null;
+    const semesterId = activeSemester?.id || null;
+    const academicYear = activeSemester?.academic_year || null;
+
     const relativePath = path.join("uploads", "supervision-reports", req.file.filename);
 
     const [result] = await query(
       `INSERT INTO supervision_reports
-       (lecturer_id, title, file_name, file_path, file_type, file_size, report_type, other_category, status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'submitted')`,
-      [req.user.id, title, req.file.originalname, relativePath, req.file.mimetype, req.file.size, reportType, otherCategory]
+       (lecturer_id, semester_id, academic_year, title, file_name, file_path, file_type, file_size, report_type, other_category, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'submitted')`,
+      [req.user.id, semesterId, academicYear, title, req.file.originalname, relativePath, req.file.mimetype, req.file.size, reportType, otherCategory]
     );
 
     await notifyAdmins({
@@ -316,6 +352,7 @@ export const uploadSupervisionReport = async (req, res) => {
     res.status(201).json({
       message: "Supervision report uploaded successfully.",
       reportId: result.insertId,
+      semesterName: activeSemester ? `${activeSemester.academic_year}` : null,
     });
   } catch (error) {
     if (req.file?.path) {

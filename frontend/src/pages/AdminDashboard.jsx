@@ -73,8 +73,9 @@ const ChartCard = ({ title, subtitle, children, extra }) => (
 
 const AdminDashboard = () => {
   const { user } = useAuth();
-  const [activityFilter, setActivityFilter] = useState("This Academic Year");
+  const [activityFilter, setActivityFilter] = useState("");
   const [data, setData] = useState({
+    availableSemesters: [],
     stats: {
       activeEvaluationWindows: 0,
       totalSubmissions: 0,
@@ -95,6 +96,12 @@ const AdminDashboard = () => {
       try {
         const response = await api.get(`/admin/dashboard-stats?activityFilter=${encodeURIComponent(activityFilter)}`);
         setData(response.data);
+        
+        // Auto-select the active semester on initial load if activityFilter is empty
+        if (!activityFilter && response.data.availableSemesters?.length > 0) {
+          const activeSemester = response.data.availableSemesters.find(s => s.isActive);
+          setActivityFilter(activeSemester ? activeSemester.id : response.data.availableSemesters[0].id);
+        }
       } catch (error) {
         console.error("Failed to load dashboard stats", error);
       }
@@ -120,16 +127,33 @@ const AdminDashboard = () => {
       <div className="bg-[#F6F8FC] min-h-screen -mx-4 -my-6 px-4 py-6 sm:-mx-8 sm:px-8 lg:px-8 lg:py-8 font-sans">
         
         {/* Header */}
-        <div className="mb-8">
-          <p className="text-sm font-semibold uppercase tracking-widest text-[#4F6EF7]">Welcome Back</p>
-          <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl mt-1">{user?.full_name || "Administrator"}</h2>
-          <p className="mt-2 text-sm text-slate-500">System Administrator • University Lecturer Evaluation System</p>
+        <div className="mb-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-widest text-[#4F6EF7]">Welcome Back</p>
+            <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl mt-1">{user?.full_name || "Administrator"}</h2>
+            <p className="mt-2 text-sm text-slate-500">System Administrator • University Lecturer Evaluation System</p>
+          </div>
+          
+          <div className="w-64">
+            <select 
+              className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm focus:border-[#4F6EF7] focus:outline-none focus:ring-2 focus:ring-[#4F6EF7]/20 transition-all"
+              value={activityFilter}
+              onChange={(e) => setActivityFilter(e.target.value)}
+            >
+              <option value="" disabled>Select Evaluation Period</option>
+              {(data.availableSemesters || []).map(sem => (
+                <option key={sem.id} value={sem.id}>
+                  {sem.name} {sem.isActive && '(Active)'}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {/* Row 1: KPI Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-6">
           <KPICard title="Active Evaluation Windows" value={data.stats.activeEvaluationWindows} desc="Evaluation periods currently accepting student submissions." Icon={Icons.Calendar} />
-          <KPICard title="Total Evaluations Submitted" value={data.stats.totalSubmissions.toLocaleString()} desc="Total evaluation forms submitted during the active window." Icon={Icons.Document} />
+          <KPICard title="Total Evaluations Submitted" value={data.stats.totalSubmissions.toLocaleString()} desc="Total evaluation forms submitted for the selected period." Icon={Icons.Document} />
           <KPICard title="Lecturer Participation" value={`${data.stats.participationRate}%`} desc="Percentage of approved lecturers who have received evaluations." Icon={Icons.UserGroup} />
           <KPICard title="Student Response Rate" value={`${data.stats.responseRate}%`} desc="Students who completed evaluations out of all expected evaluations." Icon={Icons.GraduationCap} />
           <KPICard title="Average Lecturer Rating" value={`${data.stats.averageRating} / 5`} desc="Average teaching effectiveness rating across all evaluations." Icon={Icons.Star} />
@@ -138,22 +162,7 @@ const AdminDashboard = () => {
         {/* Row 2: Monthly Activity & Completion Progress */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6">
           <div className="lg:col-span-8">
-            <ChartCard 
-              title="Evaluation Activity"
-              extra={
-                <div className="w-56">
-                  <SearchableSelect 
-                    options={[
-                      { value: "This Academic Year", label: "This Academic Year" },
-                      { value: "Last Academic Year", label: "Last Academic Year" },
-                      { value: "All Time", label: "All Time" }
-                    ]}
-                    value={activityFilter}
-                    onChange={(e) => setActivityFilter(e.target.value)}
-                  />
-                </div>
-              }
-            >
+              <ChartCard title="Evaluation Activity">
               <Bar 
                 options={barOptions} 
                 data={{

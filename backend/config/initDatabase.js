@@ -161,6 +161,8 @@ const createTables = [
   `CREATE TABLE IF NOT EXISTS supervision_reports (
     id INT AUTO_INCREMENT PRIMARY KEY,
     lecturer_id INT NOT NULL,
+    semester_id INT NULL,
+    academic_year VARCHAR(20) NULL,
     title VARCHAR(200) NOT NULL,
     file_name VARCHAR(255) NOT NULL,
     file_path VARCHAR(500) NOT NULL,
@@ -450,6 +452,10 @@ const migrateExistingTables = async () => {
   await addColumnIfMissing("lecturer_award_scores", "other_score", "DECIMAL(6,2) NOT NULL DEFAULT 0 AFTER mentoring_score");
   await addColumnIfMissing("lecturer_award_scores", "peer_evaluation_score", "DECIMAL(6,2) NOT NULL DEFAULT 0 AFTER other_score");
 
+  // Migrate supervision_reports: add semester context added after initial release
+  await addColumnIfMissing("supervision_reports", "semester_id", "INT NULL AFTER lecturer_id");
+  await addColumnIfMissing("supervision_reports", "academic_year", "VARCHAR(20) NULL AFTER semester_id");
+
   // Migrate semesters: add module_selection_deadline added after initial release
   await addColumnIfMissing("semesters", "module_selection_deadline", "DATETIME NULL DEFAULT NULL");
 
@@ -564,14 +570,7 @@ const normalizeSemesters = async () => {
     await query("UPDATE semesters SET is_active = ? WHERE id = ?", [group.has_active ? 1 : 0, canonicalId]);
   }
 
-  const [activeSemesters] = await query(
-    "SELECT id FROM semesters WHERE is_active = 1 ORDER BY created_at DESC, id DESC"
-  );
 
-  if (activeSemesters.length > 1) {
-    const activeId = activeSemesters[0].id;
-    await query("UPDATE semesters SET is_active = CASE WHEN id = ? THEN 1 ELSE 0 END", [activeId]);
-  }
 
   await addUniqueIndexIfMissing("semesters", "uq_semesters_name_year", "semester_name, academic_year");
 };

@@ -25,9 +25,10 @@ const AdminActivityReports = () => {
       const matchesSearch = `${report.lecturer_name} ${report.department_name} ${report.title}`.toLowerCase().includes(reportSearch.toLowerCase());
       const matchesStatus = (reportStatusFilter === "all" || report.status === reportStatusFilter);
       const matchesTab = (report.report_type === activeInboxTab || (report.report_type == null && activeInboxTab === "supervision"));
-      return matchesSearch && matchesStatus && matchesTab;
+      const matchesSemester = (!filters.semesterId || filters.semesterId === "all" || String(report.semester_id) === String(filters.semesterId));
+      return matchesSearch && matchesStatus && matchesTab && matchesSemester;
     });
-  }, [reports, reportSearch, reportStatusFilter, activeInboxTab]);
+  }, [reports, reportSearch, reportStatusFilter, activeInboxTab, filters.semesterId]);
 
 
 
@@ -187,6 +188,16 @@ const AdminActivityReports = () => {
             />
             <div className="sm:w-48 shrink-0">
               <SearchableSelect
+                value={filters.semesterId}
+                onChange={(e) => setFilters(curr => ({...curr, semesterId: e.target.value}))}
+                options={[
+                  { value: "all", label: "All Semesters" },
+                  ...semesters.map(s => ({ value: s.id.toString(), label: `${s.academic_year} — ${s.semester_name}` }))
+                ]}
+              />
+            </div>
+            <div className="sm:w-48 shrink-0">
+              <SearchableSelect
                 value={reportStatusFilter}
                 onChange={(e) => setReportStatusFilter(e.target.value)}
                 options={[
@@ -203,11 +214,17 @@ const AdminActivityReports = () => {
         </div>
         <div className="max-h-[28rem] overflow-y-auto overflow-x-auto">
           <table className="w-full text-left text-sm" style={{minWidth:'700px'}}>
-            <thead className="sticky top-0 z-10 bg-white text-slate-500"><tr><th className="py-3 pr-4">Lecturer</th><th className="py-3 pr-4">Department</th><th className="py-3 pr-4">Report Title</th><th className="py-3 pr-4">Type</th><th className="py-3 pr-4">Submitted</th><th className="py-3 pr-4">Status</th><th className="py-3 pr-4">Action</th></tr></thead>
+            <thead className="sticky top-0 z-10 bg-white text-slate-500"><tr><th className="py-3 pr-4">Lecturer</th><th className="py-3 pr-4">Department</th><th className="py-3 pr-4">Report Title</th><th className="py-3 pr-4">Academic Year / Semester</th><th className="py-3 pr-4">Type</th><th className="py-3 pr-4">Submitted</th><th className="py-3 pr-4">Status</th><th className="py-3 pr-4">Action</th></tr></thead>
             <tbody>
               {filteredReports.map((report) => (
                 <tr key={report.id} className="border-t border-slate-100">
                   <td className="py-4 pr-4">{report.lecturer_name}</td><td className="py-4 pr-4">{report.department_name}</td><td className="py-4 pr-4 font-semibold">{report.title}</td>
+                  <td className="py-4 pr-4 text-slate-500 whitespace-nowrap text-xs">
+                    {report.academic_year
+                      ? <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-700 font-semibold">{report.academic_year} — {report.semester_name || "Unknown"}</span>
+                      : <span className="text-slate-400">—</span>
+                    }
+                  </td>
                   <td className="py-4 pr-4 capitalize text-slate-600">{report.report_type || "supervision"} {report.other_category ? `(${report.other_category.replace('_', ' ')})` : ''}</td>
                   <td className="py-4 pr-4">{new Date(report.submitted_at).toLocaleDateString()}</td>
                   <td className="py-4 pr-4">
@@ -230,7 +247,7 @@ const AdminActivityReports = () => {
       {selectedReport && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
           <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl sm:p-8">
-            <h2 className="text-2xl font-bold text-brandBlue">Review Supervision Report</h2>
+            <h2 className="text-2xl font-bold text-brandBlue">Review {selectedReport.report_type ? selectedReport.report_type.charAt(0).toUpperCase() + selectedReport.report_type.slice(1) : 'Supervision'} Report</h2>
             <p className="mt-2 text-sm text-slate-500">
               {selectedReport.lecturer_name} • {selectedReport.title}
             </p>
@@ -257,7 +274,7 @@ const AdminActivityReports = () => {
               </div>
               
               <div className="grid gap-4 sm:grid-cols-2">
-                <label className="space-y-2">
+                <div className="space-y-2">
                   <span className="text-sm font-semibold text-slate-700">Status</span>
                   <SearchableSelect 
                     value={reviewDraft.status}
@@ -269,7 +286,7 @@ const AdminActivityReports = () => {
                       { value: "rejected", label: "Rejected" },
                     ]}
                   />
-                </label>
+                </div>
                 
                 <label className="space-y-2">
                   <span className="text-sm font-semibold text-slate-700">Marks (0-100)</span>

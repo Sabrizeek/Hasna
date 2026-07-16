@@ -158,19 +158,19 @@ const HoDLecturerDetail = () => {
                 </article>
                 <article className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
                   <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Peer Eval</p>
-                  <p className="mt-4 text-4xl font-bold text-slate-950">{details.scores?.peerEvaluationScore != null ? details.scores.peerEvaluationScore : "-"}</p>
+                  <p className="mt-4 text-4xl font-bold text-slate-950">{details.scores?.peerEvaluationScore != null ? `${details.scores.peerEvaluationScore}%` : "-"}</p>
                 </article>
                 <article className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
                   <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Mentoring</p>
-                  <p className="mt-4 text-4xl font-bold text-slate-950">{details.scores?.mentoringScore != null ? details.scores.mentoringScore : "-"}</p>
+                  <p className="mt-4 text-4xl font-bold text-slate-950">{details.scores?.mentoringScore != null ? `${details.scores.mentoringScore}%` : "-"}</p>
                 </article>
                 <article className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
                   <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Supervision</p>
-                  <p className="mt-4 text-4xl font-bold text-slate-950">{details.scores?.supervisionScore != null ? details.scores.supervisionScore : "-"}</p>
+                  <p className="mt-4 text-4xl font-bold text-slate-950">{details.scores?.supervisionScore != null ? `${details.scores.supervisionScore}%` : "-"}</p>
                 </article>
                 <article className="rounded-3xl border border-slate-200 bg-slate-50 p-5">
                   <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-500">Other</p>
-                  <p className="mt-4 text-4xl font-bold text-slate-950">{details.scores?.otherScore != null ? details.scores.otherScore : "-"}</p>
+                  <p className="mt-4 text-4xl font-bold text-slate-950">{details.scores?.otherScore != null ? `${details.scores.otherScore}%` : "-"}</p>
                 </article>
                 <article className="rounded-3xl border-2 border-amber-400 bg-amber-50 p-5 shadow-sm">
                   <p className="text-sm font-bold uppercase tracking-[0.2em] text-amber-700">Overall Score</p>
