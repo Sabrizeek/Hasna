@@ -78,7 +78,7 @@ export const register = async (req, res) => {
 };
 
 export const login = async (req, res) => {
-  const identifier = req.body.identifier || req.body.email || req.body.universityId;
+  const identifier = (req.body.identifier || req.body.email || req.body.universityId || "").toString().trim();
   const password = req.body.password;
   if (!identifier || !password) return res.status(400).json({ message: "University ID or email and password are required." });
 
@@ -91,7 +91,7 @@ export const login = async (req, res) => {
 };
 
 export const studentLogin = async (req, res) => {
-  const universityId = req.body.universityId || req.body.university_id;
+  const universityId = (req.body.universityId || req.body.university_id || "").toString().trim();
   const password = req.body.password;
   if (!universityId || !password) return res.status(400).json({ message: "University ID and password are required." });
 
@@ -104,7 +104,7 @@ export const studentLogin = async (req, res) => {
 };
 
 export const staffLogin = async (req, res) => {
-  const identifier = req.body.identifier || req.body.universityId || req.body.email;
+  const identifier = (req.body.identifier || req.body.universityId || req.body.email || "").toString().trim();
   const password = req.body.password;
   if (!identifier || !password) return res.status(400).json({ message: "University ID or email and password are required." });
 
