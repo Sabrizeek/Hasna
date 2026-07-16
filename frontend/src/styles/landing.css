@@ -421,27 +421,28 @@
     /* Wrap */
     .wrap{padding:0 20px;}
 
-    /* NAV — compact single-row on mobile */
+    /* NAV — stacked on mobile to prevent text cut-off */
     .nav .wrap{
-      height:64px;
-      padding:0 20px;
-      flex-direction:row;
+      height:auto;
+      padding:16px 20px;
+      flex-direction:column;
       align-items:center;
-      justify-content:space-between;
-      gap:0;
+      justify-content:center;
+      gap:16px;
     }
-    .brand{gap:10px;}
-    .brand img{height:36px;}
-    .brand-text .b1{font-size:9px; letter-spacing:.1em;}
-    .brand-text .b2{font-size:13px;}
-    .nav-actions{gap:8px;}
-    .btn{padding:8px 16px; font-size:13px;}
-    .nav-actions .btn{ flex:none; }
+    .brand{gap:12px; width:100%; justify-content:center;}
+    .brand img{height:40px;}
+    .brand-text{align-items:flex-start;}
+    .brand-text .b1{font-size:10px; letter-spacing:.1em;}
+    .brand-text .b2{font-size:14px;}
+    .nav-actions{gap:10px; width:100%; justify-content:center;}
+    .btn{padding:10px 16px; font-size:13.5px;}
+    .nav-actions .btn{ flex:1; justify-content:center; }
 
     /* HERO — tighter, better proportioned */
     .hero{min-height:100svh; min-height:100vh;}
     .hero-content{
-      padding:80px 0 56px;
+      padding:140px 0 56px;
       text-align:center;
     }
     .hero h1{
