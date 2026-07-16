@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import AdminLayout from "../components/AdminLayout.jsx";
 import api from "../api/axios.js";
 import { downloadCSV } from "../utils/csvExport.js";
+import SearchableSelect from "../components/SearchableSelect.jsx";
 
 const AdminAwardScores = () => {
   const [departments, setDepartments] = useState([]);
@@ -125,14 +126,28 @@ const AdminAwardScores = () => {
               placeholder="Search lecturer, email, department"
               className="rounded-2xl border border-slate-300 px-4 py-3 sm:col-span-2 xl:col-span-3"
             />
-            <select value={filters.departmentId} onChange={(e) => setFilters((current) => ({ ...current, departmentId: e.target.value }))} className="rounded-2xl border border-slate-300 px-4 py-3">
-              <option value="">All departments</option>
-              {departments.map((department) => <option key={department.id} value={department.id}>{department.department_name}</option>)}
-            </select>
-            <select value={filters.semesterId} onChange={(e) => handleSemesterChange(e.target.value)} className="rounded-2xl border border-slate-300 px-4 py-3">
-              <option value="">All Semesters</option>
-              {semesters.map((semester) => <option key={semester.id} value={semester.id}>{semester.semester_name} - {semester.academic_year}</option>)}
-            </select>
+            <SearchableSelect
+              value={filters.departmentId}
+              onChange={(e) => setFilters((current) => ({ ...current, departmentId: e.target.value }))}
+              options={[
+                { value: "", label: "All departments" },
+                ...departments.map((department) => ({
+                  value: department.id,
+                  label: department.department_name,
+                }))
+              ]}
+            />
+            <SearchableSelect
+              value={filters.semesterId}
+              onChange={(e) => handleSemesterChange(e.target.value)}
+              options={[
+                { value: "", label: "All Semesters" },
+                ...semesters.map((semester) => ({
+                  value: semester.id,
+                  label: `${semester.semester_name} - ${semester.academic_year}`
+                }))
+              ]}
+            />
             <div className="flex gap-2 sm:col-span-2 xl:col-span-1">
               <button onClick={loadScores} className="w-full rounded-2xl bg-brandBlue px-5 py-3 font-semibold text-white transition hover:opacity-90">Refresh</button>
               <button onClick={handleDownloadScoresCSV} className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-brandGold px-4 py-3 font-semibold text-white transition hover:opacity-90">

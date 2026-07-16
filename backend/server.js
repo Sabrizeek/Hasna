@@ -27,17 +27,9 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 5000;
 
-app.use(
-  cors({
-    origin: process.env.CLIENT_URL || "http://localhost:5173",
-  })
-);
+app.use(cors({ origin: '*' }));
 app.use(express.json());
 app.use("/uploads", express.static(path.resolve(process.cwd(), "uploads")));
-
-app.get("/", (req, res) => {
-  res.json({ message: "Lecturer Evaluation System API is running." });
-});
 
 app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
@@ -73,8 +65,8 @@ const startServer = async () => {
     await initializeDatabase();
     await ensureUploadDirectories();
     await query("SELECT 1 AS ok");
-    app.listen(port, () => {
-      console.log(`Server running on port ${port}`);
+    app.listen(port, "0.0.0.0", () => {
+      console.log(`Server running on port ${port} (0.0.0.0)`);
       console.log("MySQL connection is ready.");
     });
   } catch (error) {

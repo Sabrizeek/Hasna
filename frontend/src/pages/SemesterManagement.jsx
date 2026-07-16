@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from "react";
 import AdminLayout from "../components/AdminLayout.jsx";
 import api from "../api/axios.js";
-
+import SearchableSelect from "../components/SearchableSelect.jsx";
 const emptyForm = { semester_name: "", academic_year: "", is_active: false };
 
 const SemesterManagement = () => {
@@ -84,7 +84,7 @@ const SemesterManagement = () => {
           <button className="mt-5 rounded-2xl bg-brandBlue px-5 py-3 font-semibold text-white">{editingId ? "Update" : "Save"}</button>
         </form>
 
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col">
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col min-w-0">
           <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
               <h3 className="text-xl font-bold text-brandBlue">Semesters</h3>
@@ -97,19 +97,21 @@ const SemesterManagement = () => {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="rounded-2xl border border-slate-300 px-4 py-2 text-sm outline-none transition focus:border-brandBlue w-full sm:w-64"
               />
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="rounded-2xl border border-slate-300 px-4 py-2 text-sm outline-none transition focus:border-brandBlue w-full sm:w-auto"
-              >
-                <option value="all">All Statuses</option>
-                <option value="active">Active</option>
-                <option value="inactive">Inactive</option>
-              </select>
+              <div className="w-full sm:w-48">
+                <SearchableSelect
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  options={[
+                    { value: "all", label: "All Statuses" },
+                    { value: "active", label: "Active" },
+                    { value: "inactive", label: "Inactive" },
+                  ]}
+                />
+              </div>
             </div>
           </div>
-          <div className="max-h-[34rem] overflow-y-auto overflow-x-auto">
-            <table className="w-full table-fixed text-left text-sm [&_td]:break-words [&_th]:break-words min-w-[600px]">
+          <div className="max-h-[34rem] overflow-y-auto overflow-x-auto w-full">
+            <table className="w-full text-left text-sm min-w-[750px]">
               <thead className="sticky top-0 z-10 bg-white">
                 <tr className="text-slate-500">
                   <th className="py-3 pr-4 font-semibold">Semester</th>

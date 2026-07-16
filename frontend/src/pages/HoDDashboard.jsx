@@ -8,10 +8,12 @@ import {
 } from "chart.js";
 import { useEffect, useMemo, useState } from "react";
 import { Bar } from "react-chartjs-2";
+import SearchableSelect from "../components/SearchableSelect";
 import { Link } from "react-router-dom";
 import api from "../api/axios.js";
 import DashboardAnnouncements from "../components/DashboardAnnouncements.jsx";
 import HoDLayout from "../components/HoDLayout.jsx";
+import { useAuth } from "../context/AuthContext.jsx";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
 
@@ -23,6 +25,7 @@ const sortValue = (row, key) => {
 };
 
 const HoDDashboard = () => {
+  const { user } = useAuth();
   const [overview, setOverview] = useState(null);
   const [semesters, setSemesters] = useState([]);
   const [filters, setFilters] = useState({ semesterId: "", academicYear: "" });
@@ -158,29 +161,33 @@ const HoDDashboard = () => {
 
   return (
     <HoDLayout departmentName={overview?.department?.department_name}>
+      <div className="mb-6 sm:mb-8">
+        <p className="text-sm font-semibold uppercase tracking-widest text-amber-700">Welcome Back</p>
+        <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl">{user?.full_name}</h2>
+        <p className="mt-2 text-sm text-slate-600">Head of Department • {overview?.department?.department_name || user?.department_name || "Department"}</p>
+      </div>
+
       <section className="rounded-3xl border border-amber-100 bg-white p-6 shadow-sm sm:p-8">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-amber-700">Department Analytics</p>
-            <h2 className="mt-3 text-3xl font-bold text-slate-950">{overview?.department?.department_name || "HoD Dashboard"}</h2>
-          </div>
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <select
-              value={filters.semesterId}
-              onChange={handleSemesterChange}
-              className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold outline-none focus:border-amber-500 focus:ring-4 focus:ring-amber-100"
-            >
-              <option value="">All Semesters</option>
-              {semesters.map((semester) => (
-                <option key={semester.id} value={semester.id}>
-                  {semester.semester_name} - {semester.academic_year}
-                </option>
-              ))}
-            </select>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="w-full sm:w-64">
+              <SearchableSelect
+                options={[
+                  { value: "", label: "All Semesters" },
+                  ...semesters.map((semester) => ({
+                    value: semester.id,
+                    label: `${semester.semester_name?.trim()} - ${semester.academic_year?.trim()}`
+                  }))
+                ]}
+                value={filters.semesterId}
+                onChange={handleSemesterChange}
+                placeholder="Select Semester"
+              />
+            </div>
             <button
               type="button"
               onClick={handleExport}
-              className="rounded-2xl bg-amber-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-amber-700"
+              className="w-full sm:w-auto rounded-2xl bg-amber-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-amber-700 whitespace-nowrap text-center"
             >
               Export Report
             </button>
@@ -200,20 +207,37 @@ const HoDDashboard = () => {
 
         <div className="mt-8 rounded-3xl border border-slate-200 bg-slate-50 p-5">
           <h3 className="text-xl font-bold text-slate-950">Average Evaluation Score Per Lecturer</h3>
-          <div className="mt-5 h-80">
+          <div className="mt-5 h-[350px] sm:h-[400px] w-full">
             {loading ? (
               <div className="flex h-full items-center justify-center text-sm text-slate-600">Loading analytics...</div>
             ) : (overview?.chartData || []).length === 0 ? (
               <div className="flex h-full items-center justify-center text-sm font-medium text-amber-700">No lecturer evaluation data available.</div>
             ) : (
-              <Bar data={chartData} options={{ responsive: true, maintainAspectRatio: false, scales: { y: { min: 0, max: 100 } } }} />
+              <Bar 
+                data={chartData} 
+                options={{ 
+                  responsive: true, 
+                  maintainAspectRatio: false, 
+                  scales: { 
+                    x: {
+                      ticks: {
+                        callback: function(value) {
+                          const label = this.getLabelForValue(value);
+                          return label.length > 12 ? label.substring(0, 12) + "..." : label;
+                        }
+                      }
+                    },
+                    y: { min: 0, max: 100 } 
+                  } 
+                }} 
+              />
             )}
           </div>
         </div>
 
         <div className="mt-8 overflow-hidden rounded-3xl border border-slate-200">
-          <div className="max-h-[32rem] overflow-auto">
-            <table className="w-full table-fixed text-left text-sm [&_td]:break-words [&_th]:break-words">
+          <div className="max-h-[32rem] overflow-x-auto overflow-y-auto">
+            <table className="w-full text-left text-sm" style={{minWidth:'900px'}}>
               <thead className="sticky top-0 z-10 bg-slate-900 text-white">
                 <tr>
                   {[

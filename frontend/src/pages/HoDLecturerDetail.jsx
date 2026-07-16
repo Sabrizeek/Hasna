@@ -190,8 +190,8 @@ const HoDLecturerDetail = () => {
               </div>
             ) : activeTab === "peer" ? (
               <div className="mt-6 overflow-hidden rounded-3xl border border-slate-200">
-                <div className="max-h-[30rem] overflow-y-auto overflow-x-hidden">
-                <table className="w-full table-fixed text-left text-sm [&_td]:break-words [&_th]:break-words">
+                <div className="max-h-[30rem] overflow-y-auto overflow-x-auto w-full">
+                <table className="w-full min-w-[800px] text-left text-sm [&_td]:break-words [&_th]:break-words">
                   <thead className="sticky top-0 z-10 bg-slate-900 text-white">
                     <tr>
                       <th className="px-5 py-4 font-semibold">Evaluator</th>
@@ -223,8 +223,8 @@ const HoDLecturerDetail = () => {
               </div>
             ) : (
               <div className="mt-6 overflow-hidden rounded-3xl border border-slate-200">
-                <div className="max-h-[30rem] overflow-y-auto overflow-x-hidden">
-                <table className="w-full table-fixed text-left text-sm [&_td]:break-words [&_th]:break-words">
+                <div className="max-h-[30rem] overflow-y-auto overflow-x-auto w-full">
+                <table className="w-full min-w-[800px] text-left text-sm [&_td]:break-words [&_th]:break-words">
                   <thead className="sticky top-0 z-10 bg-slate-900 text-white">
                     <tr>
                       <th className="px-5 py-4 font-semibold">Title</th>

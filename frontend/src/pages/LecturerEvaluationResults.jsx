@@ -201,7 +201,7 @@ const LecturerEvaluationResults = () => {
                         <p className="text-sm font-bold text-sky-700">{question.label}</p>
                         <h3 className="mt-2 min-h-16 text-sm font-semibold leading-7 text-slate-900">{question.questionText}</h3>
                         <div className="mt-5 grid gap-5 sm:grid-cols-[180px_1fr] sm:items-center">
-                          <div className="h-44 flex items-center justify-center">
+                          <div className="w-full flex items-center justify-center" style={{height: 'min(11rem, 50vw)' }}>
                             {hasData ? (
                               <Pie data={buildChartData(question.distribution)} options={chartOptions} />
                             ) : (

@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import api from "../api/axios.js";
 import AdminLayout from "../components/AdminLayout.jsx";
 import { downloadCSV } from "../utils/csvExport.js";
+import SearchableSelect from "../components/SearchableSelect.jsx";
 
 const AdminActivityReports = () => {
   const [departments, setDepartments] = useState([]);
@@ -151,7 +152,7 @@ const AdminActivityReports = () => {
   return (
     <AdminLayout title="Activity Reports">
 
-      <div className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col">
+      <div className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col min-w-0">
         <div className="mb-6 flex flex-col gap-5">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex items-center gap-3">
@@ -177,29 +178,31 @@ const AdminActivityReports = () => {
             </div>
           </div>
           
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
             <input 
               placeholder="Search reports..." 
               value={reportSearch}
               onChange={(e) => setReportSearch(e.target.value)}
-              className="flex-1 rounded-2xl border border-slate-300 px-4 py-2.5 text-sm outline-none transition focus:border-brandBlue"
+              className="flex-1 w-full sm:w-auto rounded-2xl border border-slate-300 px-4 py-2.5 text-sm outline-none transition focus:border-brandBlue"
             />
-            <select
-              value={reportStatusFilter}
-              onChange={(e) => setReportStatusFilter(e.target.value)}
-              className="w-full sm:w-48 rounded-2xl border border-slate-300 px-4 py-2.5 text-sm outline-none transition focus:border-brandBlue shrink-0"
-            >
-              <option value="all">All Statuses</option>
-              <option value="submitted">Submitted</option>
-              <option value="under_review">Under Review</option>
-              <option value="accepted">Accepted</option>
-              <option value="rejected">Rejected</option>
-            </select>
+            <div className="sm:w-48 shrink-0">
+              <SearchableSelect
+                value={reportStatusFilter}
+                onChange={(e) => setReportStatusFilter(e.target.value)}
+                options={[
+                  { value: "all", label: "All Statuses" },
+                  { value: "submitted", label: "Submitted" },
+                  { value: "under_review", label: "Under Review" },
+                  { value: "accepted", label: "Accepted" },
+                  { value: "rejected", label: "Rejected" },
+                ]}
+              />
+            </div>
             <button onClick={handleDownloadReportsCSV} className="w-full sm:w-auto shrink-0 rounded-2xl bg-brandGold px-6 py-2.5 text-sm font-semibold text-white transition hover:opacity-90">Export CSV</button>
           </div>
         </div>
-        <div className="max-h-[28rem] overflow-y-auto overflow-x-hidden">
-          <table className="w-full table-fixed text-left text-sm [&_td]:break-words [&_th]:break-words">
+        <div className="max-h-[28rem] overflow-y-auto overflow-x-auto">
+          <table className="w-full text-left text-sm" style={{minWidth:'700px'}}>
             <thead className="sticky top-0 z-10 bg-white text-slate-500"><tr><th className="py-3 pr-4">Lecturer</th><th className="py-3 pr-4">Department</th><th className="py-3 pr-4">Report Title</th><th className="py-3 pr-4">Type</th><th className="py-3 pr-4">Submitted</th><th className="py-3 pr-4">Status</th><th className="py-3 pr-4">Action</th></tr></thead>
             <tbody>
               {filteredReports.map((report) => (
@@ -256,16 +259,16 @@ const AdminActivityReports = () => {
               <div className="grid gap-4 sm:grid-cols-2">
                 <label className="space-y-2">
                   <span className="text-sm font-semibold text-slate-700">Status</span>
-                  <select 
+                  <SearchableSelect 
                     value={reviewDraft.status}
                     onChange={(e) => setReviewDraft(c => ({ ...c, status: e.target.value, score: e.target.value !== "accepted" ? "" : c.score }))}
-                    className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm"
-                  >
-                    <option value="submitted">Submitted</option>
-                    <option value="under_review">Under Review</option>
-                    <option value="accepted">Accepted</option>
-                    <option value="rejected">Rejected</option>
-                  </select>
+                    options={[
+                      { value: "submitted", label: "Submitted" },
+                      { value: "under_review", label: "Under Review" },
+                      { value: "accepted", label: "Accepted" },
+                      { value: "rejected", label: "Rejected" },
+                    ]}
+                  />
                 </label>
                 
                 <label className="space-y-2">

@@ -456,44 +456,149 @@ export const deleteUser = async (req, res) => {
 
 export const getDashboardStats = async (req, res) => {
   try {
+    const { activityFilter } = req.query;
+    
+    let monthlyActivityQuery = `
+        SELECT MONTH(submitted_at) as month, COUNT(*) as count 
+        FROM evaluation_submissions 
+        WHERE academic_year = (SELECT academic_year FROM semesters WHERE is_active = 1 LIMIT 1)
+        GROUP BY MONTH(submitted_at)
+        ORDER BY month ASC
+    `;
+    
+    if (activityFilter === "All Time") {
+      monthlyActivityQuery = `
+        SELECT MONTH(submitted_at) as month, COUNT(*) as count 
+        FROM evaluation_submissions 
+        GROUP BY MONTH(submitted_at)
+        ORDER BY month ASC
+      `;
+    } else if (activityFilter === "Last Academic Year") {
+      monthlyActivityQuery = `
+        SELECT MONTH(submitted_at) as month, COUNT(*) as count 
+        FROM evaluation_submissions 
+        WHERE academic_year = (
+          SELECT DISTINCT academic_year FROM semesters 
+          WHERE academic_year != (SELECT academic_year FROM semesters WHERE is_active = 1 LIMIT 1) 
+          ORDER BY academic_year DESC LIMIT 1
+        )
+        GROUP BY MONTH(submitted_at)
+        ORDER BY month ASC
+      `;
+    }
+
     await syncEvaluationWindowStatuses();
-    const [[students], [lecturers], [hods], [submissions], [windows], [pendingReports], [recentReports], [recentActivity]] =
-      await Promise.all([
-        query("SELECT COUNT(*) AS count FROM users WHERE role = 'student' AND deleted_at IS NULL"),
-        query("SELECT COUNT(*) AS count FROM users WHERE role = 'lecturer' AND deleted_at IS NULL"),
-        query("SELECT COUNT(*) AS count FROM users WHERE role = 'hod' AND deleted_at IS NULL"),
-        query("SELECT COUNT(*) AS count FROM evaluation_submissions"),
-        query("SELECT COUNT(*) AS count FROM evaluation_windows WHERE status = 'open' AND open_date <= NOW() AND close_date > NOW()"),
-        query("SELECT COUNT(*) AS count FROM supervision_reports WHERE status IN ('submitted', 'under_review')"),
-        query(
-          `SELECT sr.id, sr.title, sr.status, sr.submitted_at, u.full_name AS lecturer_name
-           FROM supervision_reports sr
-           INNER JOIN users u ON sr.lecturer_id = u.id
-           ORDER BY sr.submitted_at DESC
-           LIMIT 5`
-        ),
-        query(
-          `SELECT al.id, al.action, al.entity_type, al.created_at, u.full_name AS user_name
-           FROM audit_logs al
-           LEFT JOIN users u ON al.user_id = u.id
-           ORDER BY al.created_at DESC
-           LIMIT 5`
-        ),
-      ]);
+    const [
+      [students],
+      [totalApprovedLecturers],
+      [hods],
+      [submissionsActive],
+      [windows],
+      [pendingReports],
+      [participatingLecturers],
+      [expectedEvaluations],
+      [averageRatingResult],
+      [monthlyActivityRows],
+      [recentReports],
+      [recentActivity],
+    ] = await Promise.all([
+      query("SELECT COUNT(*) AS count FROM users WHERE role = 'student' AND deleted_at IS NULL"),
+      query("SELECT COUNT(*) AS count FROM users WHERE role = 'lecturer' AND status = 'approved' AND deleted_at IS NULL"),
+      query("SELECT COUNT(*) AS count FROM users WHERE role = 'hod' AND deleted_at IS NULL"),
+      query(`
+        SELECT COUNT(*) AS count 
+        FROM evaluation_submissions es
+        JOIN evaluation_windows ew ON ew.semester_id = es.semester_id AND ew.academic_year = es.academic_year
+        WHERE ew.status = 'open' AND ew.open_date <= NOW() AND ew.close_date > NOW()
+      `),
+      query("SELECT COUNT(*) AS count FROM evaluation_windows WHERE status = 'open' AND open_date <= NOW() AND close_date > NOW()"),
+      query("SELECT COUNT(*) AS count FROM supervision_reports WHERE status IN ('submitted', 'under_review')"),
+      query(`
+        SELECT COUNT(DISTINCT es.lecturer_id) AS count
+        FROM evaluation_submissions es
+        JOIN evaluation_windows ew ON ew.semester_id = es.semester_id AND ew.academic_year = es.academic_year
+        WHERE ew.status = 'open' AND ew.open_date <= NOW() AND ew.close_date > NOW()
+      `),
+      query(`
+        SELECT SUM(CASE WHEN l.type = 'both' THEN 2 ELSE 1 END) AS count
+        FROM student_courses sc
+        JOIN users st ON sc.student_id = st.id AND st.status = 'approved' AND st.deleted_at IS NULL
+        JOIN (
+          SELECT c.id AS course_id, c.semester_id, s.academic_year, u.id AS lecturer_id, 'both' AS type
+          FROM courses c
+          JOIN users u ON c.lecturer_id = u.id
+          JOIN semesters s ON c.semester_id = s.id
+          WHERE u.role = 'lecturer' AND u.status = 'approved' AND u.deleted_at IS NULL
+          UNION
+          SELECT lm.course_id, lm.semester_id, lm.academic_year, u.id AS lecturer_id, lm.type
+          FROM lecturer_modules lm
+          JOIN users u ON lm.lecturer_id = u.id
+          WHERE u.role = 'lecturer' AND u.status = 'approved' AND u.deleted_at IS NULL
+        ) l ON sc.course_id = l.course_id AND sc.semester_id = l.semester_id
+        JOIN evaluation_windows ew ON ew.semester_id = l.semester_id AND ew.academic_year = l.academic_year
+        WHERE ew.status = 'open' AND ew.open_date <= NOW() AND ew.close_date > NOW()
+      `),
+      query(`
+        SELECT AVG(r.score) AS average
+        FROM evaluation_responses r
+        JOIN evaluation_submissions s ON r.submission_id = s.id
+        JOIN evaluation_windows ew ON s.semester_id = ew.semester_id AND s.academic_year = s.academic_year
+        WHERE ew.status = 'open' AND ew.open_date <= NOW() AND ew.close_date > NOW()
+      `),
+      query(monthlyActivityQuery),
+      query(
+        `SELECT sr.id, sr.title, sr.status, sr.submitted_at, u.full_name AS lecturer_name
+         FROM supervision_reports sr
+         INNER JOIN users u ON sr.lecturer_id = u.id
+         ORDER BY sr.submitted_at DESC
+         LIMIT 5`
+      ),
+      query(
+        `SELECT al.id, al.action, al.entity_type, al.created_at, u.full_name AS user_name
+         FROM audit_logs al
+         LEFT JOIN users u ON al.user_id = u.id
+         ORDER BY al.created_at DESC
+         LIMIT 5`
+      ),
+    ]);
+
+    const completed = Number(submissionsActive[0]?.count || 0);
+    const expected = Number(expectedEvaluations[0]?.count || 0);
+    const responseRate = expected > 0 ? (completed / expected) * 100 : 0;
+    
+    const totalLecs = Number(totalApprovedLecturers[0]?.count || 0);
+    const participating = Number(participatingLecturers[0]?.count || 0);
+    const participationRate = totalLecs > 0 ? (participating / totalLecs) * 100 : 0;
+
+    const avgRating = Number(averageRatingResult[0]?.average || 0);
+
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const monthlyData = monthNames.map((name, index) => {
+      const row = monthlyActivityRows.find(r => Number(r.month) === index + 1);
+      return { name, value: row ? Number(row.count) : 0 };
+    });
 
     res.json({
       stats: {
         totalStudents: Number(students[0]?.count || 0),
-        totalLecturers: Number(lecturers[0]?.count || 0),
+        totalLecturers: totalLecs,
         totalHoDs: Number(hods[0]?.count || 0),
-        totalSubmissions: Number(submissions[0]?.count || 0),
+        totalSubmissions: completed,
         activeEvaluationWindows: Number(windows[0]?.count || 0),
         pendingSupervisionReports: Number(pendingReports[0]?.count || 0),
+        participationRate: Number(participationRate.toFixed(1)),
+        responseRate: Number(responseRate.toFixed(1)),
+        averageRating: Number(avgRating.toFixed(2)),
+        expectedEvaluations: expected,
+        completedEvaluations: completed,
+        pendingEvaluations: Math.max(0, expected - completed)
       },
+      monthlyData,
       recentReports,
       recentActivity,
     });
   } catch (error) {
+    console.error("Failed to fetch dashboard stats:", error);
     res.status(500).json({ message: "Failed to fetch dashboard stats.", error: error.message });
   }
 };

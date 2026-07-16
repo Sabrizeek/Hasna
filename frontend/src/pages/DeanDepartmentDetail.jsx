@@ -8,6 +8,7 @@ import {
 } from "chart.js";
 import { useEffect, useMemo, useState } from "react";
 import { Bar } from "react-chartjs-2";
+import SearchableSelect from "../components/SearchableSelect";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import api from "../api/axios.js";
 import DeanLayout from "../components/DeanLayout.jsx";
@@ -107,13 +108,19 @@ const DeanDepartmentDetail = () => {
               <p className="mt-2 text-sm text-slate-600">HoD: {details?.hod?.name || "Not assigned"}</p>
             </div>
           </div>
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <select value={filters.semesterId} onChange={handleSemesterChange} className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-100">
-              {semesters.map((semester) => (
-                <option key={semester.id} value={semester.id}>{semester.semester_name} - {semester.academic_year}</option>
-              ))}
-            </select>
-            <button onClick={downloadDepartmentReport} className="rounded-2xl bg-orange-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-orange-700">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="w-full sm:w-64">
+              <SearchableSelect
+                options={semesters.map((semester) => ({
+                  value: semester.id,
+                  label: `${semester.semester_name?.trim()} - ${semester.academic_year?.trim()}`
+                }))}
+                value={filters.semesterId}
+                onChange={handleSemesterChange}
+                placeholder="Select Semester"
+              />
+            </div>
+            <button onClick={downloadDepartmentReport} className="w-full sm:w-auto rounded-2xl bg-orange-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-orange-700 whitespace-nowrap text-center">
               Download Department Report
             </button>
           </div>
@@ -123,7 +130,7 @@ const DeanDepartmentDetail = () => {
 
         <div className="mt-8 rounded-3xl border border-slate-200 bg-slate-50 p-5">
           <h3 className="text-xl font-bold text-slate-950">Lecturers by Average Score</h3>
-          <div className="mt-5 h-80">
+          <div className="mt-5 h-[350px] sm:h-[400px] w-full">
             {loading ? (
               <div className="flex h-full items-center justify-center text-sm text-slate-600">Loading department analytics...</div>
             ) : sortedLecturers.length === 0 ? (
@@ -132,10 +139,19 @@ const DeanDepartmentDetail = () => {
               <Bar
                 data={chartData}
                 options={{
-                  indexAxis: "y",
                   responsive: true,
                   maintainAspectRatio: false,
-                  scales: { x: { min: 0, max: 100 } },
+                  scales: {
+                    x: {
+                      ticks: {
+                        callback: function(value) {
+                          const label = this.getLabelForValue(value);
+                          return label.length > 12 ? label.substring(0, 12) + "..." : label;
+                        }
+                      }
+                    },
+                    y: { min: 0, max: 100 }
+                  }
                 }}
               />
             )}
@@ -143,8 +159,8 @@ const DeanDepartmentDetail = () => {
         </div>
 
         <div className="mt-8 overflow-hidden rounded-3xl border border-slate-200">
-          <div className="max-h-[32rem] overflow-auto">
-            <table className="w-full table-fixed text-left text-sm [&_td]:break-words [&_th]:break-words">
+          <div className="max-h-[32rem] overflow-x-auto overflow-y-auto">
+            <table className="w-full text-left text-sm" style={{minWidth:'860px'}}>
               <thead className="sticky top-0 z-10 bg-slate-900 text-white">
                 <tr>
                   <th className="px-5 py-4 font-semibold">Name</th>

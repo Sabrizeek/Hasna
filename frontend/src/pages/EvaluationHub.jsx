@@ -308,8 +308,9 @@ const EvaluationHub = () => {
                     {currentStepIndex + 1} of {currentQuestions.length}. {currentQuestions[currentStepIndex]?.question_text}
                   </h3>
                   
-                  <div className="overflow-x-auto border rounded-xl border-slate-200 shadow-sm">
-                    <table className="w-full text-left text-sm border-collapse">
+                  {/* DESKTOP TABLE VIEW */}
+                  <div className="hidden md:block overflow-x-auto border rounded-xl border-slate-200 shadow-sm">
+                    <table className="w-full text-left text-sm border-collapse min-w-[700px]">
                       <thead className="bg-slate-50 text-slate-700 border-b border-slate-200">
                         <tr>
                           <th className="p-4 font-semibold min-w-[200px] border-r border-slate-200">Lecturer Name</th>
@@ -338,12 +339,12 @@ const EvaluationHub = () => {
                                     onClick={() => handleResponseChange(rowKey, qId, num)}
                                   >
                                     {isSelected ? (
-                                      <div className="mx-auto w-8 h-8 flex items-center justify-center bg-teal-600 text-white rounded shadow-sm scale-110 transition-transform">
-                                        <svg className="w-5 h-5 font-bold" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
-                                      </div>
-                                    ) : (
-                                      <div className="mx-auto w-8 h-8 rounded border-2 border-slate-300 hover:border-teal-400 bg-white shadow-sm transition-all"></div>
-                                    )}
+                                        <div className="mx-auto w-10 h-10 flex items-center justify-center bg-teal-600 text-white rounded shadow-sm scale-110 transition-transform">
+                                          <svg className="w-5 h-5 font-bold" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                                        </div>
+                                      ) : (
+                                        <div className="mx-auto w-10 h-10 rounded border-2 border-slate-300 hover:border-teal-400 bg-white shadow-sm transition-all"></div>
+                                      )}
                                   </td>
                                 );
                               })}
@@ -353,6 +354,41 @@ const EvaluationHub = () => {
                       </tbody>
                     </table>
                   </div>
+
+                  {/* MOBILE CARD VIEW */}
+                  <div className="md:hidden flex flex-col gap-5 mt-2">
+                    {currentLecturers.map((l) => {
+                      const rowKey = `${l.lecturer_id}-${l.course_id}-${l.evalType}`;
+                      const row = formState[rowKey];
+                      const qId = currentQuestions[currentStepIndex].id;
+                      
+                      return (
+                        <div key={rowKey} className="border border-slate-200 rounded-2xl p-5 shadow-sm bg-white">
+                          <h4 className="font-bold text-slate-900 text-base">{l.lecturer_name}</h4>
+                          <p className="text-sm font-medium text-slate-500 mb-5">{l.course_code}</p>
+                          
+                          <div className="flex justify-between items-center gap-2">
+                            {[5, 4, 3, 2, 1].map(num => {
+                              const isSelected = row.responses[qId] === num;
+                              return (
+                                <div 
+                                  key={num}
+                                  onClick={() => handleResponseChange(rowKey, qId, num)}
+                                  className={`flex-1 flex flex-col items-center justify-center py-3 rounded-xl border-2 cursor-pointer transition-all ${
+                                    isSelected 
+                                      ? "bg-teal-600 border-teal-600 text-white shadow-md scale-105" 
+                                      : "bg-slate-50 border-slate-200 text-slate-600 hover:border-teal-400 hover:bg-teal-50"
+                                  }`}
+                                >
+                                  <span className={`font-bold text-lg ${isSelected ? "text-white" : ""}`}>{num}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               ) : (
                 // --- COMMENTS STEP ---
@@ -361,8 +397,9 @@ const EvaluationHub = () => {
                     Final Step: Overall Comments for {activeTab === 'theory' ? 'Theory' : 'Practical'} Modules
                   </h3>
                   
-                  <div className="overflow-x-auto border rounded-xl border-slate-200 shadow-sm">
-                    <table className="w-full text-left text-sm border-collapse">
+                  {/* DESKTOP TABLE VIEW */}
+                  <div className="hidden md:block overflow-x-auto border rounded-xl border-slate-200 shadow-sm">
+                    <table className="w-full text-left text-sm border-collapse min-w-[700px]">
                       <thead className="bg-slate-50 text-slate-700 border-b border-slate-200">
                         <tr>
                           <th className="p-4 font-semibold w-1/4 border-r border-slate-200">Lecturer Name</th>
@@ -395,16 +432,39 @@ const EvaluationHub = () => {
                       </tbody>
                     </table>
                   </div>
+
+                  {/* MOBILE CARD VIEW */}
+                  <div className="md:hidden flex flex-col gap-4 mt-2">
+                    {currentLecturers.map((l) => {
+                      const rowKey = `${l.lecturer_id}-${l.course_id}-${l.evalType}`;
+                      const row = formState[rowKey];
+                      
+                      return (
+                        <div key={rowKey} className="border border-slate-200 rounded-2xl p-5 shadow-sm bg-white">
+                          <h4 className="font-bold text-slate-900 text-base">{l.lecturer_name}</h4>
+                          <p className="text-sm font-medium text-slate-500 mb-4">{l.course_code}</p>
+                          <textarea
+                            value={row.comment}
+                            onChange={(e) => handleCommentChange(rowKey, e.target.value)}
+                            placeholder="Write a constructive comment..."
+                            rows="3"
+                            className="w-full rounded-xl border border-slate-300 p-4 focus:ring-teal-500 focus:border-teal-500 text-sm bg-slate-50 focus:bg-white transition-colors"
+                            required
+                          ></textarea>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
             </div>
 
             {/* NAVIGATION FOOTER */}
-            <div className="flex justify-between items-center mt-8 pt-6 border-t border-slate-200">
+            <div className="flex flex-col-reverse sm:flex-row justify-between items-stretch sm:items-center mt-8 pt-6 border-t border-slate-200 gap-3 sm:gap-0">
               <button 
                 onClick={() => setCurrentStepIndex(prev => prev - 1)}
                 disabled={currentStepIndex === 0}
-                className="px-6 py-3 border border-slate-300 rounded-xl font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-30 transition-colors"
+                className="w-full sm:w-auto px-6 py-3 border border-slate-300 rounded-xl font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-30 transition-colors text-center"
               >
                 Previous
               </button>
@@ -413,7 +473,7 @@ const EvaluationHub = () => {
                 <button 
                   onClick={() => setCurrentStepIndex(prev => prev + 1)}
                   disabled={!currentLecturers.every(l => formState[`${l.lecturer_id}-${l.course_id}-${l.evalType}`]?.responses?.[currentQuestions[currentStepIndex]?.id] !== undefined)}
-                  className="px-8 py-3 bg-teal-600 text-white rounded-xl font-bold hover:bg-teal-700 shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-teal-600"
+                  className="w-full sm:w-auto px-6 sm:px-8 py-3 bg-teal-600 text-white rounded-xl font-bold hover:bg-teal-700 shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-teal-600 text-center"
                 >
                   Next Question
                 </button>
@@ -428,7 +488,7 @@ const EvaluationHub = () => {
                     }
                   }}
                   disabled={submitting || (activeTab === 'theory' && practicalLecturers.length > 0 ? !isTabComplete('theory') : !isFormComplete())}
-                  className="px-8 py-3 bg-teal-600 text-white rounded-xl font-bold hover:bg-teal-700 shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full sm:w-auto px-6 sm:px-8 py-3 bg-teal-600 text-white rounded-xl font-bold hover:bg-teal-700 shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-center"
                 >
                   {submitting ? "Submitting..." : (activeTab === 'theory' && practicalLecturers.length > 0 ? "Next: Practical Evaluation" : "Submit All Evaluations")}
                 </button>
@@ -437,7 +497,7 @@ const EvaluationHub = () => {
             
             {/* Warning if trying to submit but form is incomplete */}
             {isCommentsStep && (activeTab === 'practical' || practicalLecturers.length === 0) && !isFormComplete() && (
-              <p className="text-right text-red-500 text-xs font-semibold mt-3">
+              <p className="text-center sm:text-right text-red-500 text-xs font-semibold mt-4">
                 *Please ensure you have answered all 10 questions and added comments for all lecturers across all tabs.
               </p>
             )}

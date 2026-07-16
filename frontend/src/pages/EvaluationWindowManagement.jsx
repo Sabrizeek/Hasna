@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "../api/axios.js";
 import AdminLayout from "../components/AdminLayout.jsx";
-
+import SearchableSelect from "../components/SearchableSelect.jsx";
 const emptyWindow = { semesterId: "", academicYear: "", openDate: "", closeDate: "" };
 
 const toDatetimeLocal = (value) => {
@@ -154,10 +154,17 @@ const EvaluationWindowManagement = () => {
         <form onSubmit={saveWindow} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
           <h3 className="text-xl font-bold text-brandBlue">{editingId ? "Edit Evaluation Window" : "Add Evaluation Window"}</h3>
           <p className="mt-2 text-sm leading-6 text-slate-600">Control when students can submit lecturer evaluations for a semester.</p>
-          <select value={windowForm.semesterId} onChange={(event) => syncSemester(event.target.value)} className="mt-5 w-full rounded-2xl border border-slate-300 px-4 py-3" required>
-            <option value="" disabled>Select an active semester</option>
-            {semesters.filter(s => s.is_active).map((semester) => <option key={semester.id} value={semester.id}>{semester.semester_name} - {semester.academic_year}</option>)}
-          </select>
+          <SearchableSelect
+            value={windowForm.semesterId}
+            onChange={(e) => syncSemester(e.target.value)}
+            required={true}
+            className="mt-5"
+            placeholder="Select an active semester"
+            options={semesters.filter(s => s.is_active).map((semester) => ({
+              value: semester.id,
+              label: `${semester.semester_name} - ${semester.academic_year}`
+            }))}
+          />
           <label className="mt-4 block space-y-2">
             <span className="text-sm font-semibold text-slate-700">Open Date</span>
             <input type="datetime-local" value={windowForm.openDate} onChange={(event) => setWindowForm((current) => ({ ...current, openDate: event.target.value }))} className="w-full rounded-2xl border border-slate-300 px-4 py-3" required />

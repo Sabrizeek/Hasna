@@ -3,8 +3,10 @@ import { useNavigate } from "react-router-dom";
 import api from "../api/axios.js";
 import DashboardAnnouncements from "../components/DashboardAnnouncements.jsx";
 import StudentLayout from "../components/StudentLayout.jsx";
+import { useAuth } from "../context/AuthContext.jsx";
 
 const StudentDashboard = () => {
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -70,7 +72,13 @@ const StudentDashboard = () => {
   return (
     <StudentLayout>
       <div className="max-w-7xl mx-auto space-y-6">
-        <h1 className="text-3xl font-bold text-slate-900">Student Dashboard</h1>
+        <div className="mb-6 sm:mb-8">
+          <p className="text-sm font-semibold uppercase tracking-widest text-teal-600">Welcome Back</p>
+          <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl">{user?.full_name}</h2>
+          <p className="mt-2 text-sm text-slate-600">
+            Student • {department?.name || "University of Ruhuna"}
+          </p>
+        </div>
 
         {error && (
           <div className="bg-red-50 text-red-700 p-4 rounded-lg border border-red-200">

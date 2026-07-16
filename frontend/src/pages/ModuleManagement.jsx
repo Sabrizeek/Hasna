@@ -229,9 +229,9 @@ const ModuleManagement = () => {
 
   return (
     <AdminLayout title="Module Management">
-      <div className="grid gap-6">
+      <div className="grid gap-6 min-w-0">
         {/* ADD NEW MODULE FORM */}
-        <div className="space-y-6">
+        <div className="space-y-6 min-w-0">
           <form onSubmit={handleCourseSubmit} className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col gap-6">
             <div>
               <h3 className="text-xl font-bold text-brandBlue">{editingCourseId ? "Edit Module & Assignments" : "Add New Module & Assignments"}</h3>
@@ -248,19 +248,29 @@ const ModuleManagement = () => {
               </div>
               <div>
                 <label className="text-sm font-semibold text-slate-700 mb-1 block">Department</label>
-                <select name="department_id" value={courseForm.department_id} onChange={handleCourseChange} className="w-full rounded-2xl border border-slate-300 px-4 py-3 bg-white" required>
-                  {departments.map((department) => (
-                    <option key={department.id} value={department.id}>{department.department_name}</option>
-                  ))}
-                </select>
+                <SearchableSelect
+                  name="department_id"
+                  value={courseForm.department_id}
+                  onChange={handleCourseChange}
+                  required={true}
+                  options={departments.map((department) => ({
+                    value: department.id,
+                    label: department.department_name,
+                  }))}
+                />
               </div>
               <div>
                 <label className="text-sm font-semibold text-slate-700 mb-1 block">Semester</label>
-                <select name="semester_id" value={courseForm.semester_id} onChange={handleCourseChange} className="w-full rounded-2xl border border-slate-300 px-4 py-3 bg-white" required>
-                  {semesters.map((semester) => (
-                    <option key={semester.id} value={semester.id}>{semester.semester_name} - {semester.academic_year}</option>
-                  ))}
-                </select>
+                <SearchableSelect
+                  name="semester_id"
+                  value={courseForm.semester_id}
+                  onChange={handleCourseChange}
+                  required={true}
+                  options={semesters.map((semester) => ({
+                    value: semester.id,
+                    label: `${semester.semester_name} - ${semester.academic_year}`,
+                  }))}
+                />
               </div>
               <div className="flex items-end pb-3 gap-8">
                 <label className="flex items-center gap-2 cursor-pointer">
@@ -326,8 +336,8 @@ const ModuleManagement = () => {
         </div>
 
         {/* MODULES TABLE */}
-        <div className="space-y-6">
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="space-y-6 min-w-0">
+          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm min-w-0">
             <div className="mb-4 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
               <div className="flex items-center gap-3">
                 <h3 className="text-xl font-bold text-brandBlue">All Modules</h3>
@@ -342,34 +352,41 @@ const ModuleManagement = () => {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full sm:w-64 rounded-2xl border border-slate-300 px-4 py-2 text-sm focus:border-brandBlue focus:outline-none transition"
                 />
-                <select
-                  value={filterDepartment}
-                  onChange={(e) => setFilterDepartment(e.target.value)}
-                  className="w-full sm:w-48 rounded-2xl border border-slate-300 px-4 py-2 text-sm bg-white focus:border-brandBlue focus:outline-none transition"
-                >
-                  <option value="">All Departments</option>
-                  {departments.map(d => (
-                    <option key={d.id} value={d.id}>{d.department_name}</option>
-                  ))}
-                </select>
-                <select
-                  value={filterIsCore}
-                  onChange={(e) => setFilterIsCore(e.target.value)}
-                  className="w-full sm:w-36 rounded-2xl border border-slate-300 px-4 py-2 text-sm bg-white focus:border-brandBlue focus:outline-none transition"
-                >
-                  <option value="">All Modules</option>
-                  <option value="1">Core Only</option>
-                  <option value="0">Optional Only</option>
-                </select>
-                <select
-                  value={filterType}
-                  onChange={(e) => setFilterType(e.target.value)}
-                  className="w-full sm:w-36 rounded-2xl border border-slate-300 px-4 py-2 text-sm bg-white focus:border-brandBlue focus:outline-none transition"
-                >
-                  <option value="">All Types</option>
-                  <option value="theory">Theory</option>
-                  <option value="practical">Practical</option>
-                </select>
+                <div className="w-full sm:w-48">
+                  <SearchableSelect
+                    value={filterDepartment}
+                    onChange={(e) => setFilterDepartment(e.target.value)}
+                    options={[
+                      { value: "", label: "All Departments" },
+                      ...departments.map(d => ({
+                        value: d.id,
+                        label: d.department_name,
+                      }))
+                    ]}
+                  />
+                </div>
+                <div className="w-full sm:w-36">
+                  <SearchableSelect
+                    value={filterIsCore}
+                    onChange={(e) => setFilterIsCore(e.target.value)}
+                    options={[
+                      { value: "", label: "All Modules" },
+                      { value: "1", label: "Core Only" },
+                      { value: "0", label: "Optional Only" },
+                    ]}
+                  />
+                </div>
+                <div className="w-full sm:w-36">
+                  <SearchableSelect
+                    value={filterType}
+                    onChange={(e) => setFilterType(e.target.value)}
+                    options={[
+                      { value: "", label: "All Types" },
+                      { value: "theory", label: "Theory" },
+                      { value: "practical", label: "Practical" },
+                    ]}
+                  />
+                </div>
                 <button onClick={handleDownloadCoursesCSV} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-brandGold px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 w-full sm:w-auto">
                   <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="h-4 w-4"><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
                   CSV
@@ -377,17 +394,17 @@ const ModuleManagement = () => {
               </div>
             </div>
             
-            <div className="max-h-[38rem] overflow-y-auto overflow-x-auto">
-              <table className="w-full table-fixed text-left text-sm [&_td]:break-words [&_th]:break-words min-w-[900px]">
+            <div className="max-h-[38rem] overflow-y-auto overflow-x-auto w-full">
+              <table className="w-full text-left text-sm min-w-[1000px]">
                 <thead className="sticky top-0 z-10 bg-white">
                   <tr className="text-slate-500 border-b border-slate-200">
-                    <th className="py-3 pr-4 font-semibold w-24">Code</th>
-                    <th className="py-3 pr-4 font-semibold w-1/4">Course</th>
-                    <th className="py-3 pr-4 font-semibold w-1/5">Lecturer</th>
-                    <th className="py-3 pr-4 font-semibold w-24">Type</th>
-                    <th className="py-3 pr-4 font-semibold">Department</th>
-                    <th className="py-3 pr-4 font-semibold w-24">Semester</th>
-                    <th className="w-[180px] py-3 pr-4 font-semibold text-right">Action</th>
+                    <th className="py-3 pr-4 font-semibold min-w-[100px]">Code</th>
+                    <th className="py-3 pr-4 font-semibold min-w-[250px]">Course</th>
+                    <th className="py-3 pr-4 font-semibold min-w-[200px]">Lecturer</th>
+                    <th className="py-3 pr-4 font-semibold min-w-[120px]">Type</th>
+                    <th className="py-3 pr-4 font-semibold min-w-[150px]">Department</th>
+                    <th className="py-3 pr-4 font-semibold min-w-[120px]">Semester</th>
+                    <th className="min-w-[180px] py-3 pr-4 font-semibold text-right">Action</th>
                   </tr>
                 </thead>
                 <tbody>

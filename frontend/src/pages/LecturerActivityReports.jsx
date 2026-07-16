@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "../api/axios.js";
 import LecturerLayout from "../components/LecturerLayout.jsx";
-
+import SearchableSelect from "../components/SearchableSelect.jsx";
 const maxFileSize = 10 * 1024 * 1024;
 const allowedTypes = [
   "application/pdf",
@@ -181,32 +181,32 @@ const LecturerSupervisionReports = () => {
             </label>
             <label className="space-y-2">
               <span className="text-sm font-semibold text-slate-700">Report Type</span>
-              <select
+              <SearchableSelect
                 value={reportType}
                 onChange={(e) => {
                   setReportType(e.target.value);
                   if (e.target.value !== "other") setOtherCategory("");
                 }}
-                className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
-              >
-                <option value="supervision">Supervision</option>
-                <option value="mentoring">Mentoring</option>
-                <option value="other">Other</option>
-              </select>
+                options={[
+                  { value: "supervision", label: "Supervision" },
+                  { value: "mentoring", label: "Mentoring" },
+                  { value: "other", label: "Other" },
+                ]}
+              />
             </label>
             {reportType === "other" && (
               <label className="space-y-2">
                 <span className="text-sm font-semibold text-slate-700">Category</span>
-                <select
+                <SearchableSelect
                   value={otherCategory}
                   onChange={(e) => setOtherCategory(e.target.value)}
-                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-sky-500 focus:ring-4 focus:ring-sky-100"
-                >
-                  <option value="">Select a Category...</option>
-                  <option value="counselling">Counselling</option>
-                  <option value="societies">Societies</option>
-                  <option value="academic_coordinator">Academic Coordinator</option>
-                </select>
+                  options={[
+                    { value: "", label: "Select a Category..." },
+                    { value: "counselling", label: "Counselling" },
+                    { value: "societies", label: "Societies" },
+                    { value: "academic_coordinator", label: "Academic Coordinator" },
+                  ]}
+                />
               </label>
             )}
           </div>
@@ -232,8 +232,8 @@ const LecturerSupervisionReports = () => {
           ) : reports.length === 0 ? (
             <div className="p-5 text-sm font-medium text-amber-700">No supervision reports have been submitted yet.</div>
           ) : (
-            <div className="max-h-[28rem] overflow-y-auto overflow-x-hidden">
-              <table className="w-full table-fixed text-left text-sm [&_td]:break-words [&_th]:break-words">
+            <div className="max-h-[28rem] overflow-y-auto overflow-x-auto w-full">
+              <table className="w-full min-w-[800px] text-left text-sm [&_td]:break-words [&_th]:break-words">
                 <thead className="sticky top-0 z-10 bg-slate-50 text-slate-500">
                   <tr>
                     <th className="px-5 py-3 font-semibold">Report Title</th>

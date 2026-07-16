@@ -322,7 +322,7 @@ const AdminPeerEvaluations = () => {
         </form>
 
         {/* Middle: Assigned Lecturers List */}
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col">
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col min-w-0">
           <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <div className="flex items-center gap-3">
@@ -339,8 +339,8 @@ const AdminPeerEvaluations = () => {
             />
           </div>
 
-          <div className="mt-6 max-h-[20rem] overflow-y-scroll overflow-x-hidden">
-            <table className="w-full table-auto divide-y divide-slate-200 text-left text-sm [&_td]:px-2 [&_th]:px-2">
+          <div className="mt-6 max-h-[20rem] overflow-y-auto overflow-x-auto">
+            <table className="w-full table-auto divide-y divide-slate-200 text-left text-sm [&_td]:px-2 [&_th]:px-2" style={{minWidth:'600px'}}>
               <thead className="sticky top-0 z-10 bg-white text-slate-500">
                 <tr>
                   <th className="py-3 font-semibold whitespace-nowrap">Evaluated Lecturer</th>
@@ -414,7 +414,7 @@ const AdminPeerEvaluations = () => {
         </div>
 
         {/* Bottom: Uploads Table */}
-        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col">
+        <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col min-w-0">
           <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <div className="flex items-center gap-3">
@@ -431,8 +431,8 @@ const AdminPeerEvaluations = () => {
             />
           </div>
 
-          <div className="mt-6 max-h-[20rem] overflow-y-scroll overflow-x-hidden">
-            <table className="w-full table-auto divide-y divide-slate-200 text-left text-sm [&_td]:px-2 [&_th]:px-2">
+          <div className="mt-6 max-h-[20rem] overflow-y-auto overflow-x-auto">
+            <table className="w-full table-auto divide-y divide-slate-200 text-left text-sm [&_td]:px-2 [&_th]:px-2" style={{minWidth:'560px'}}>
               <thead className="sticky top-0 z-10 bg-white text-slate-500 border-b border-slate-200">
                 <tr>
                   <th className="py-3 font-semibold whitespace-nowrap">Evaluated Lecturer</th>
@@ -467,21 +467,22 @@ const AdminPeerEvaluations = () => {
                           <td className="py-4 font-medium text-slate-900 whitespace-nowrap pl-4">{upload.evaluator_name}</td>
                           <td className="py-4 text-slate-600 whitespace-nowrap">{new Date(upload.submitted_at).toLocaleString()}</td>
                           <td className="py-4 whitespace-nowrap">
-                            <select
+                            <SearchableSelect
                               value={upload.status}
                               onChange={(e) => updateStatus(upload, e.target.value)}
-                              className={`w-full rounded-xl border border-slate-300 px-3 py-1.5 text-xs font-semibold outline-none transition focus:border-brandBlue focus:ring-2 focus:ring-brandBlue/20 ${
+                              className={`w-full ${
                                 upload.status === 'accepted' ? 'bg-emerald-50 text-emerald-700' :
                                 upload.status === 'rejected' ? 'bg-red-50 text-red-700' :
                                 upload.status === 'under_review' ? 'bg-amber-50 text-amber-700' :
                                 'bg-sky-50 text-sky-700'
                               }`}
-                            >
-                              <option value="submitted" className="bg-white text-slate-900">Submitted</option>
-                              <option value="under_review" className="bg-white text-slate-900">Under Review</option>
-                              <option value="accepted" className="bg-white text-slate-900">Accepted</option>
-                              <option value="rejected" className="bg-white text-slate-900">Rejected</option>
-                            </select>
+                              options={[
+                                { value: "submitted", label: "Submitted" },
+                                { value: "under_review", label: "Under Review" },
+                                { value: "accepted", label: "Accepted" },
+                                { value: "rejected", label: "Rejected" },
+                              ]}
+                            />
                           </td>
                           <td className="py-4 whitespace-nowrap text-right">
                             <div className="flex items-center justify-end gap-2">

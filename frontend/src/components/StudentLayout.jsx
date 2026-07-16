@@ -1,19 +1,21 @@
+import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
-import NotificationBell from "./NotificationBell.jsx";
-import ProfileAvatarButton from "./ProfileAvatarButton.jsx";
+import TopHeader from "./TopHeader.jsx";
 import SiteFooter from "./SiteFooter.jsx";
+
+const navItems = [
+  { label: "Dashboard", to: "/student/dashboard", icon: "M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" },
+  { label: "Module Registration", to: "/student/modules", icon: "M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" },
+  { label: "Notifications", to: "/notifications", icon: "M15 17H9m10-1.5c-.9-.9-1.5-1.8-1.5-4.5a5.5 5.5 0 0 0-11 0c0 2.7-.6 3.6-1.5 4.5-.4.4-.1 1.5.6 1.5h12.8c.7 0 1-1.1.6-1.5Z" },
+  { label: "Profile", to: "/student/profile", icon: "M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" },
+];
 
 const StudentLayout = ({ children }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const navItems = [
-    { label: "Dashboard", to: "/student/dashboard" },
-    { label: "Module Registration", to: "/student/modules" },
-    { label: "Notifications", to: "/notifications" },
-    { label: "Profile", to: "/student/profile" },
-  ];
+  const [navOpen, setNavOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -22,39 +24,91 @@ const StudentLayout = ({ children }) => {
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-slate-50">
-      <header className="fixed inset-x-0 top-0 z-50 border-b border-teal-100 bg-white/95 shadow-sm backdrop-blur">
-        <div className="flex w-full flex-wrap items-center justify-between gap-3 px-4 py-4 sm:px-6 lg:px-10">
-          <Link to="/student/dashboard" className="min-w-0 space-y-1">
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-teal-600">University of Ruhuna</p>
-            <h1 className="break-words text-lg font-bold text-slate-900">Lecturer Evaluation System</h1>
-          </Link>
+      {/* Header */}
+      <TopHeader
+        title="Student Workspace"
+        user={user}
+        logout={handleLogout}
+        setSidebarOpen={setNavOpen}
+        profileTo="/student/profile"
+        avatarFallback="ST"
+        avatarColor="bg-teal-600"
+        notificationAccent="text-teal-600"
+        className="border-teal-100 bg-white/95 backdrop-blur"
+      />
 
-          <div className="flex min-w-0 items-center gap-3">
-            <NotificationBell accent="text-teal-600" />
-            <div className="hidden text-right sm:block">
-              <p className="text-sm font-semibold text-slate-900">{user?.full_name}</p>
-              <p className="text-xs text-teal-700">Student</p>
-            </div>
-            <ProfileAvatarButton user={user} to="/student/profile" fallback="ST" className="bg-teal-600" />
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-teal-700"
-            >
-              Logout
-            </button>
+      {/* Mobile nav overlay */}
+      {navOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          onClick={() => setNavOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Mobile nav drawer */}
+      <div
+        className={`fixed inset-y-0 left-0 z-50 w-72 bg-white shadow-2xl transition-transform duration-300 ease-in-out lg:hidden ${
+          navOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        <div className="flex items-center justify-between border-b border-teal-100 px-5 py-4">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-widest text-teal-600">Student</p>
+            <p className="mt-1 font-semibold text-slate-900">{user?.full_name}</p>
           </div>
+          <button
+            type="button"
+            onClick={() => setNavOpen(false)}
+            className="flex h-8 w-8 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100"
+            aria-label="Close menu"
+          >
+            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
-      </header>
+        <nav className="space-y-1 p-4">
+          {navItems.map((item) => {
+            const active = location.pathname === item.to;
+            return (
+              <Link
+                key={item.to}
+                to={item.to}
+                onClick={() => setNavOpen(false)}
+                className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-semibold transition ${
+                  active ? "bg-teal-600 text-white" : "text-slate-600 hover:bg-teal-50 hover:text-teal-700"
+                }`}
+              >
+                <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
+                </svg>
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
+      </div>
 
-      <div className="w-full min-w-0 px-4 pb-8 pt-28 sm:px-6 lg:px-10 lg:pl-[310px]">
-        <aside className="mb-6 rounded-3xl border border-teal-100 bg-white p-3 shadow-sm lg:fixed lg:left-8 lg:top-28 lg:mb-0 lg:w-[250px]">
+      {/* Page layout */}
+      <div className="w-full min-w-0 px-4 pb-8 pt-20 sm:px-6 lg:px-10 lg:pl-[310px]">
+        {/* Desktop sidebar */}
+        <aside className="mb-6 hidden rounded-3xl border border-teal-100 bg-white p-3 shadow-sm lg:fixed lg:left-8 lg:top-20 lg:mb-0 lg:block lg:w-[250px]">
           <p className="px-3 py-2 text-xs font-bold uppercase tracking-[0.25em] text-teal-600">Student</p>
-          <nav className="flex flex-wrap gap-2 lg:flex-col">
+          <nav className="flex flex-col gap-1">
             {navItems.map((item) => {
               const active = location.pathname === item.to;
               return (
-                <Link key={item.to} to={item.to} className={`whitespace-nowrap rounded-2xl px-4 py-3 text-sm font-semibold transition ${active ? "bg-teal-600 text-white" : "text-slate-600 hover:bg-teal-50 hover:text-teal-700"}`}>
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold transition ${
+                    active ? "bg-teal-600 text-white shadow-sm" : "text-slate-600 hover:bg-teal-50 hover:text-teal-700"
+                  }`}
+                >
+                  <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d={item.icon} />
+                  </svg>
                   {item.label}
                 </Link>
               );

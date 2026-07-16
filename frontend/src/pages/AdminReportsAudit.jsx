@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import api from "../api/axios.js";
 import AdminLayout from "../components/AdminLayout.jsx";
 import { downloadCSV } from "../utils/csvExport.js";
+import SearchableSelect from "../components/SearchableSelect.jsx";
 
 const AdminReportsAudit = () => {
   const [departments, setDepartments] = useState([]);
@@ -185,8 +186,26 @@ const AdminReportsAudit = () => {
         <h3 className="text-xl font-bold text-brandBlue">System Users Report</h3>
         <p className="mt-1 text-sm text-slate-500">Export a list of system users filtered by role, department, and registration date.</p>
         <div className="mt-5 grid gap-4 md:grid-cols-3 xl:grid-cols-5">
-          <select value={filters.role} onChange={(e) => setFilters((c) => ({ ...c, role: e.target.value }))} className="rounded-2xl border border-slate-300 px-4 py-3"><option value="">All roles</option><option value="student">Students</option><option value="lecturer">Lecturers</option></select>
-          <select value={filters.departmentId} onChange={(e) => setFilters((c) => ({ ...c, departmentId: e.target.value }))} className="rounded-2xl border border-slate-300 px-4 py-3"><option value="">All departments</option>{departments.map((d) => <option key={d.id} value={d.id}>{d.department_name}</option>)}</select>
+          <SearchableSelect
+            value={filters.role}
+            onChange={(e) => setFilters((c) => ({ ...c, role: e.target.value }))}
+            options={[
+              { value: "", label: "All roles" },
+              { value: "student", label: "Students" },
+              { value: "lecturer", label: "Lecturers" },
+            ]}
+          />
+          <SearchableSelect
+            value={filters.departmentId}
+            onChange={(e) => setFilters((c) => ({ ...c, departmentId: e.target.value }))}
+            options={[
+              { value: "", label: "All departments" },
+              ...departments.map((d) => ({
+                value: d.id,
+                label: d.department_name,
+              }))
+            ]}
+          />
           <input type="date" value={filters.from} onChange={(e) => setFilters((c) => ({ ...c, from: e.target.value }))} className="rounded-2xl border border-slate-300 px-4 py-3" />
           <input type="date" value={filters.to} onChange={(e) => setFilters((c) => ({ ...c, to: e.target.value }))} className="rounded-2xl border border-slate-300 px-4 py-3" />
           <button onClick={handleDownloadCustomReport} className="rounded-2xl bg-brandBlue px-5 py-3 font-semibold text-white">Export Users CSV</button>
@@ -207,11 +226,53 @@ const AdminReportsAudit = () => {
 
         <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <input placeholder="Search student, lecturer, course" value={evaluationFilters.search} onChange={(e) => setEvaluationFilters((c) => ({ ...c, search: e.target.value }))} className="rounded-2xl border border-slate-300 px-4 py-3" />
-          <select value={evaluationFilters.departmentId} onChange={(e) => setEvaluationFilters((c) => ({ ...c, departmentId: e.target.value, courseId: "" }))} className="rounded-2xl border border-slate-300 px-4 py-3"><option value="">All departments</option>{departments.map((d) => <option key={d.id} value={d.id}>{d.department_name}</option>)}</select>
-          <select value={evaluationFilters.courseId} onChange={(e) => setEvaluationFilters((c) => ({ ...c, courseId: e.target.value }))} className="rounded-2xl border border-slate-300 px-4 py-3"><option value="">All courses</option>{courses.filter((course) => !evaluationFilters.departmentId || String(course.department_id) === evaluationFilters.departmentId).map((course) => <option key={course.id} value={course.id}>{course.course_code} - {course.course_name}</option>)}</select>
-          <select value={evaluationFilters.lecturerId} onChange={(e) => setEvaluationFilters((c) => ({ ...c, lecturerId: e.target.value }))} className="rounded-2xl border border-slate-300 px-4 py-3"><option value="">All lecturers</option>{lecturers.filter((lecturer) => !evaluationFilters.departmentId || String(lecturer.department_id) === evaluationFilters.departmentId).map((lecturer) => <option key={lecturer.id} value={lecturer.id}>{lecturer.full_name}</option>)}</select>
-          <select value={evaluationFilters.semesterId} onChange={(e) => handleEvaluationSemester(e.target.value)} className="rounded-2xl border border-slate-300 px-4 py-3"><option value="">All semesters</option>{semesters.map((s) => <option key={s.id} value={s.id}>{s.semester_name} - {s.academic_year}</option>)}</select>
-          <select value={evaluationFilters.type} onChange={(e) => setEvaluationFilters((c) => ({ ...c, type: e.target.value }))} className="rounded-2xl border border-slate-300 px-4 py-3"><option value="">All types</option><option value="theory">Theory</option><option value="practical">Practical</option></select>
+          <SearchableSelect
+            value={evaluationFilters.departmentId}
+            onChange={(e) => setEvaluationFilters((c) => ({ ...c, departmentId: e.target.value, courseId: "" }))}
+            options={[
+              { value: "", label: "All departments" },
+              ...departments.map((d) => ({ value: d.id, label: d.department_name }))
+            ]}
+          />
+          <SearchableSelect
+            value={evaluationFilters.courseId}
+            onChange={(e) => setEvaluationFilters((c) => ({ ...c, courseId: e.target.value }))}
+            options={[
+              { value: "", label: "All courses" },
+              ...courses.filter((course) => !evaluationFilters.departmentId || String(course.department_id) === evaluationFilters.departmentId).map((course) => ({
+                value: course.id,
+                label: `${course.course_code} - ${course.course_name}`
+              }))
+            ]}
+          />
+          <SearchableSelect
+            value={evaluationFilters.lecturerId}
+            onChange={(e) => setEvaluationFilters((c) => ({ ...c, lecturerId: e.target.value }))}
+            options={[
+              { value: "", label: "All lecturers" },
+              ...lecturers.filter((lecturer) => !evaluationFilters.departmentId || String(lecturer.department_id) === evaluationFilters.departmentId).map((lecturer) => ({
+                value: lecturer.id,
+                label: lecturer.full_name
+              }))
+            ]}
+          />
+          <SearchableSelect
+            value={evaluationFilters.semesterId}
+            onChange={(e) => handleEvaluationSemester(e.target.value)}
+            options={[
+              { value: "", label: "All semesters" },
+              ...semesters.map((s) => ({ value: s.id, label: `${s.semester_name} - ${s.academic_year}` }))
+            ]}
+          />
+          <SearchableSelect
+            value={evaluationFilters.type}
+            onChange={(e) => setEvaluationFilters((c) => ({ ...c, type: e.target.value }))}
+            options={[
+              { value: "", label: "All types" },
+              { value: "theory", label: "Theory" },
+              { value: "practical", label: "Practical" }
+            ]}
+          />
           <input type="date" value={evaluationFilters.dateFrom} onChange={(e) => setEvaluationFilters((c) => ({ ...c, dateFrom: e.target.value }))} className="rounded-2xl border border-slate-300 px-4 py-3" />
           <input type="date" value={evaluationFilters.dateTo} onChange={(e) => setEvaluationFilters((c) => ({ ...c, dateTo: e.target.value }))} className="rounded-2xl border border-slate-300 px-4 py-3" />
         </div>
@@ -221,8 +282,8 @@ const AdminReportsAudit = () => {
         </div>
         {evaluationError && <p className="mt-3 text-sm font-semibold text-red-600">{evaluationError}</p>}
 
-        <div className="mt-5 max-h-[34rem] overflow-y-auto overflow-x-hidden">
-          <table className="w-full table-fixed text-left text-xs sm:text-sm [&_td]:break-words [&_th]:break-words">
+        <div className="mt-5 max-h-[34rem] overflow-y-auto overflow-x-auto">
+          <table className="w-full text-left text-xs sm:text-sm" style={{minWidth:'900px'}}>
             <thead className="sticky top-0 z-10 bg-white text-slate-500">
               <tr><th className="py-3 pr-4">Submitted</th><th className="py-3 pr-4">University ID</th><th className="py-3 pr-4">Student</th><th className="py-3 pr-4">Student Email</th><th className="py-3 pr-4">Department</th><th className="py-3 pr-4">Course</th><th className="py-3 pr-4">Lecturer</th><th className="py-3 pr-4">Type</th><th className="py-3 pr-4">Grade</th><th className="py-3 pr-4">Action</th></tr>
             </thead>
@@ -265,8 +326,8 @@ const AdminReportsAudit = () => {
             </div>
           </div>
         </div>
-        <div className="mt-5 max-h-[34rem] overflow-y-auto overflow-x-hidden">
-          <table className="w-full table-fixed text-left text-sm [&_td]:break-words [&_th]:break-words">
+        <div className="mt-5 max-h-[34rem] overflow-y-auto overflow-x-auto">
+          <table className="w-full text-left text-sm" style={{minWidth:'600px'}}>
             <thead className="sticky top-0 z-10 bg-white text-slate-500">
               <tr><th className="py-3 pr-4">Time</th><th className="py-3 pr-4">User</th><th className="py-3 pr-4">Action</th><th className="py-3 pr-4">Entity</th><th className="py-3 pr-4">Details</th><th className="py-3 pr-4">Action</th></tr>
             </thead>
@@ -322,8 +383,8 @@ const AdminReportsAudit = () => {
               <p className="mt-2 whitespace-pre-wrap text-sm text-slate-700">{selectedEvaluation.commentText || "No comment recorded."}</p>
             </div>
 
-            <div className="mt-5 max-h-80 overflow-y-auto overflow-x-hidden">
-              <table className="w-full table-fixed text-left text-sm [&_td]:break-words [&_th]:break-words">
+            <div className="mt-5 max-h-80 overflow-y-auto overflow-x-auto">
+              <table className="w-full text-left text-sm" style={{minWidth:'400px'}}>
                 <thead className="sticky top-0 z-10 bg-white text-slate-500"><tr><th className="py-3 pr-4">Question</th><th className="py-3 pr-4">Score</th></tr></thead>
                 <tbody>
                   {(selectedEvaluation.responses || []).map((response) => (

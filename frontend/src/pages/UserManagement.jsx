@@ -210,13 +210,18 @@ const UserManagement = () => {
           <input name="universityId" value={formData.universityId} onChange={handleChange} placeholder="University ID" className="rounded-2xl border border-slate-300 px-4 py-3" required />
           <input name="fullName" value={formData.fullName} onChange={handleChange} placeholder="Full name" className="rounded-2xl border border-slate-300 px-4 py-3" required />
           <input name="email" type="email" value={formData.email} onChange={handleChange} placeholder="Email" className="rounded-2xl border border-slate-300 px-4 py-3" required />
-          <select name="role" value={formData.role} onChange={handleChange} className="rounded-2xl border border-slate-300 px-4 py-3">
-            <option value="student">Student</option>
-            <option value="lecturer">Lecturer</option>
-            <option value="hod">HoD</option>
-            <option value="dean">Dean</option>
-            <option value="admin">Admin</option>
-          </select>
+          <SearchableSelect
+            name="role"
+            value={formData.role}
+            onChange={handleChange}
+            options={[
+              { value: "student", label: "Student" },
+              { value: "lecturer", label: "Lecturer" },
+              { value: "hod", label: "HoD" },
+              { value: "dean", label: "Dean" },
+              { value: "admin", label: "Admin" },
+            ]}
+          />
           {formData.role === "student" ? (
             <details className="group relative">
               <summary className="list-none [&::-webkit-details-marker]:hidden rounded-2xl border border-slate-300 px-4 py-3 bg-white flex justify-between items-center cursor-pointer focus:outline-none focus:border-brandBlue select-none">
@@ -245,17 +250,29 @@ const UserManagement = () => {
               </div>
             </details>
           ) : (
-            <select name="departmentId" value={formData.departmentId} onChange={handleChange} disabled={formData.role === "admin"} className="rounded-2xl border border-slate-300 px-4 py-3 disabled:bg-slate-100">
-              {departments.map((department) => <option key={department.id} value={department.id}>{department.department_name}</option>)}
-            </select>
+            <SearchableSelect
+              name="departmentId"
+              value={formData.departmentId}
+              onChange={handleChange}
+              disabled={formData.role === "admin"}
+              options={departments.map((department) => ({
+                value: department.id,
+                label: department.department_name,
+              }))}
+            />
           )}
           <input name="phone" value={formData.phone} onChange={handleChange} placeholder="Phone optional" className="rounded-2xl border border-slate-300 px-4 py-3" />
           {editingId && (
-            <select name="status" value={formData.status || "approved"} onChange={handleChange} className="rounded-2xl border border-slate-300 px-4 py-3">
-              <option value="approved">Approved</option>
-              <option value="pending">Pending</option>
-              <option value="rejected">Deactivated</option>
-            </select>
+            <SearchableSelect
+              name="status"
+              value={formData.status || "approved"}
+              onChange={handleChange}
+              options={[
+                { value: "approved", label: "Approved" },
+                { value: "pending", label: "Pending" },
+                { value: "rejected", label: "Deactivated" },
+              ]}
+            />
           )}
         </div>
         <div className="mt-5 flex flex-wrap gap-3">
@@ -284,41 +301,41 @@ const UserManagement = () => {
             className="rounded-2xl border border-slate-300 px-4 py-3 lg:col-span-2"
             required
           />
-          <select
+          <SearchableSelect
             name="type"
             value={notificationForm.type}
             onChange={handleNotificationChange}
-            className="rounded-2xl border border-slate-300 px-4 py-3"
-          >
-            <option value="info">Info</option>
-            <option value="success">Success</option>
-            <option value="warning">Warning</option>
-            <option value="error">Error</option>
-            <option value="system">System</option>
-          </select>
-          <select
+            options={[
+              { value: "info", label: "Info" },
+              { value: "success", label: "Success" },
+              { value: "warning", label: "Warning" },
+              { value: "error", label: "Error" },
+              { value: "system", label: "System" },
+            ]}
+          />
+          <SearchableSelect
             name="targetType"
             value={notificationForm.targetType}
             onChange={handleNotificationChange}
-            className="rounded-2xl border border-slate-300 px-4 py-3"
-          >
-            <option value="role">Role</option>
-            <option value="user">Specific User</option>
-            <option value="all">All Users</option>
-          </select>
+            options={[
+              { value: "role", label: "Role" },
+              { value: "user", label: "Specific User" },
+              { value: "all", label: "All Users" },
+            ]}
+          />
           {notificationForm.targetType === "role" && (
-            <select
+            <SearchableSelect
               name="role"
               value={notificationForm.role}
               onChange={handleNotificationChange}
-              className="rounded-2xl border border-slate-300 px-4 py-3"
-            >
-              <option value="student">Students</option>
-              <option value="lecturer">Lecturers</option>
-              <option value="hod">HoDs</option>
-              <option value="dean">Dean</option>
-              <option value="admin">Admins</option>
-            </select>
+              options={[
+                { value: "student", label: "Students" },
+                { value: "lecturer", label: "Lecturers" },
+                { value: "hod", label: "HoDs" },
+                { value: "dean", label: "Dean" },
+                { value: "admin", label: "Admins" },
+              ]}
+            />
           )}
           {notificationForm.targetType === "user" && (
             <div className="lg:col-span-1">
@@ -345,7 +362,7 @@ const UserManagement = () => {
         </form>
       </section>
 
-      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col">
+      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm flex flex-col min-w-0">
         <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <h3 className="text-xl font-bold text-brandBlue">Active Users</h3>
@@ -353,14 +370,20 @@ const UserManagement = () => {
           </div>
           <div className="flex flex-col gap-2 sm:flex-row">
             <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search users..." className="rounded-2xl border border-slate-300 px-4 py-2 text-sm outline-none transition focus:border-brandBlue w-full sm:w-64" />
-            <select value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)} className="rounded-2xl border border-slate-300 px-4 py-2 text-sm outline-none transition focus:border-brandBlue w-full sm:w-auto">
-              <option value="all">All Roles</option>
-              <option value="student">Student</option>
-              <option value="lecturer">Lecturer</option>
-              <option value="admin">Admin</option>
-              <option value="hod">HoD</option>
-              <option value="dean">Dean</option>
-            </select>
+            <div className="w-full sm:w-48">
+              <SearchableSelect
+                value={roleFilter}
+                onChange={(event) => setRoleFilter(event.target.value)}
+                options={[
+                  { value: "all", label: "All Roles" },
+                  { value: "student", label: "Student" },
+                  { value: "lecturer", label: "Lecturer" },
+                  { value: "admin", label: "Admin" },
+                  { value: "hod", label: "HoD" },
+                  { value: "dean", label: "Dean" },
+                ]}
+              />
+            </div>
             <button onClick={handleDownloadCSV} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-brandGold px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90 w-full sm:w-auto">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="h-4 w-4"><path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
               CSV
@@ -368,7 +391,7 @@ const UserManagement = () => {
           </div>
         </div>
         <div className="max-h-[36rem] overflow-y-auto overflow-x-auto">
-          <table className="w-full table-fixed divide-y divide-slate-200 text-left text-sm [&_td]:break-words [&_th]:break-words min-w-[1000px]">
+          <table className="w-full text-left text-sm min-w-[1000px]">
             <thead className="sticky top-0 z-10 bg-white">
               <tr className="text-slate-500">
                 <th className="py-3 pr-4 font-semibold">Name</th>

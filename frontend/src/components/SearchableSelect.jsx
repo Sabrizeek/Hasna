@@ -1,6 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 
-const SearchableSelect = ({ options, value, onChange, placeholder = "Select an option..." }) => {
+const SearchableSelect = ({ 
+  options, 
+  value, 
+  onChange, 
+  placeholder = "Select an option...",
+  name,
+  disabled = false,
+  required = false,
+  className = ""
+}) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const containerRef = useRef(null);
@@ -22,15 +31,34 @@ const SearchableSelect = ({ options, value, onChange, placeholder = "Select an o
   );
 
   return (
-    <div className="relative w-full" ref={containerRef}>
+    <div className={`relative w-full ${className}`} ref={containerRef}>
+      {name && (
+        <select
+          name={name}
+          value={value || ""}
+          required={required}
+          disabled={disabled}
+          onChange={() => {}} // dummy onChange to satisfy React
+          className="pointer-events-none absolute h-0 w-0 opacity-0"
+          tabIndex={-1}
+        >
+          <option value="">{placeholder}</option>
+          {options.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      )}
       <div
         onClick={() => {
+          if (disabled) return;
           setIsOpen(!isOpen);
           if (!isOpen) setSearchQuery("");
         }}
-        className="flex w-full cursor-pointer items-center justify-between rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm transition focus-within:border-brandBlue focus-within:ring-2 focus-within:ring-brandBlue/20"
+        className={`flex w-full ${disabled ? "cursor-not-allowed bg-slate-100" : "cursor-pointer bg-white focus-within:border-brandBlue focus-within:ring-2 focus-within:ring-brandBlue/20"} items-center justify-between rounded-2xl border border-slate-300 px-4 py-3 text-sm transition`}
       >
-        {isOpen ? (
+        {isOpen && !disabled ? (
           <input
             type="text"
             className="w-full bg-transparent outline-none placeholder:text-slate-400"
@@ -44,12 +72,12 @@ const SearchableSelect = ({ options, value, onChange, placeholder = "Select an o
             {selectedOption ? selectedOption.label : placeholder}
           </span>
         )}
-        <svg style={{ width: "16px", height: "16px", flexShrink: 0 }} className="ml-2 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg style={{ width: "16px", height: "16px", flexShrink: 0 }} className={`ml-2 ${disabled ? "text-slate-400" : "text-slate-500"}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
         </svg>
       </div>
 
-      {isOpen && (
+      {isOpen && !disabled && (
         <div className="absolute z-50 mt-1 max-h-60 w-full overflow-auto rounded-2xl border border-slate-200 bg-white py-2 shadow-lg">
           {filteredOptions.length === 0 ? (
             <div className="px-4 py-2 text-sm text-slate-500">No options found.</div>
@@ -58,7 +86,7 @@ const SearchableSelect = ({ options, value, onChange, placeholder = "Select an o
               <div
                 key={opt.value}
                 onClick={() => {
-                  onChange({ target: { value: opt.value } });
+                  onChange({ target: { name, value: opt.value } });
                   setIsOpen(false);
                 }}
                 className={`cursor-pointer px-4 py-2 text-sm transition hover:bg-brandBlue/5 ${

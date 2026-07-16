@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../api/axios.js";
 
-const NotificationBell = ({ accent = "text-brandBlue" }) => {
+const NotificationBell = ({ accent = "text-brandBlue", onUnreadCountChange }) => {
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -12,10 +12,13 @@ const NotificationBell = ({ accent = "text-brandBlue" }) => {
     try {
       const response = await api.get("/notifications");
       setNotifications(response.data.notifications || []);
-      setUnreadCount(response.data.unreadCount || 0);
+      const count = response.data.unreadCount || 0;
+      setUnreadCount(count);
+      if (onUnreadCountChange) onUnreadCountChange(count);
     } catch {
       setNotifications([]);
       setUnreadCount(0);
+      if (onUnreadCountChange) onUnreadCountChange(0);
     }
   };
 
@@ -63,7 +66,7 @@ const NotificationBell = ({ accent = "text-brandBlue" }) => {
       </button>
 
       {open && (
-        <div className="absolute right-0 z-50 mt-3 w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-slate-200 bg-white p-3 shadow-xl">
+        <div className="absolute -right-[110px] sm:right-0 z-50 mt-3 w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-slate-200 bg-white p-3 shadow-xl">
           <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-2">
             <h3 className="font-bold text-slate-950">Notifications</h3>
             <button type="button" onClick={markAllRead} className="text-xs font-semibold text-slate-600 hover:text-slate-950">

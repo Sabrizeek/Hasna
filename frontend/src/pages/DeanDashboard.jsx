@@ -8,14 +8,17 @@ import {
 } from "chart.js";
 import { useEffect, useMemo, useState } from "react";
 import { Bar } from "react-chartjs-2";
+import SearchableSelect from "../components/SearchableSelect";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../api/axios.js";
 import DashboardAnnouncements from "../components/DashboardAnnouncements.jsx";
 import DeanLayout from "../components/DeanLayout.jsx";
+import { useAuth } from "../context/AuthContext.jsx";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip, Legend);
 
 const DeanDashboard = () => {
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [overview, setOverview] = useState(null);
   const [semesters, setSemesters] = useState([]);
@@ -142,20 +145,30 @@ const DeanDashboard = () => {
 
   return (
     <DeanLayout>
+      <div className="mb-6 sm:mb-8">
+        <p className="text-sm font-semibold uppercase tracking-widest text-orange-700">Welcome Back</p>
+        <h2 className="text-2xl font-bold text-slate-900 sm:text-3xl">{user?.full_name}</h2>
+        <p className="mt-2 text-sm text-slate-600">Dean • Faculty of Science</p>
+      </div>
+
       <section className="rounded-3xl border border-orange-100 bg-white p-6 shadow-sm sm:p-8">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <p className="text-sm font-semibold uppercase tracking-[0.24em] text-orange-700">Faculty Overview</p>
-            <h2 className="mt-3 text-3xl font-bold text-slate-950">Faculty of Science Analytics</h2>
-          </div>
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <select value={filters.semesterId} onChange={handleSemesterChange} className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold outline-none focus:border-orange-500 focus:ring-4 focus:ring-orange-100">
-              <option value="">All Semesters</option>
-              {semesters.map((semester) => (
-                <option key={semester.id} value={semester.id}>{semester.semester_name} - {semester.academic_year}</option>
-              ))}
-            </select>
-            <button onClick={downloadFacultyReport} className="rounded-2xl bg-orange-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-orange-700">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="w-full sm:w-64">
+              <SearchableSelect
+                options={[
+                  { value: "", label: "All Semesters" },
+                  ...semesters.map((semester) => ({
+                    value: semester.id,
+                    label: `${semester.semester_name?.trim()} - ${semester.academic_year?.trim()}`
+                  }))
+                ]}
+                value={filters.semesterId}
+                onChange={handleSemesterChange}
+                placeholder="Select Semester"
+              />
+            </div>
+            <button onClick={downloadFacultyReport} className="w-full sm:w-auto rounded-2xl bg-orange-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-orange-700 whitespace-nowrap text-center">
               Download Faculty Report
             </button>
           </div>
@@ -173,10 +186,10 @@ const DeanDashboard = () => {
         </div>
 
         <div className="mt-8 rounded-3xl border border-slate-200 bg-slate-50 p-5">
-          <h3 className="text-xl font-bold text-slate-950">Average Scores by Department</h3>
-          <div className="mt-5 h-80">
+          <h3 className="text-xl font-bold text-slate-950">Average Evaluation Score Per Department</h3>
+          <div className="mt-5 h-[350px] sm:h-[400px] w-full">
             {loading ? (
-              <div className="flex h-full items-center justify-center text-sm text-slate-600">Loading faculty analytics...</div>
+              <div className="flex h-full items-center justify-center text-sm text-slate-600">Loading analytics...</div>
             ) : (overview?.departmentAverages || []).length === 0 ? (
               <div className="flex h-full items-center justify-center text-sm font-medium text-orange-700">No department data available.</div>
             ) : (
@@ -192,7 +205,20 @@ const DeanDashboard = () => {
                       navigate(`/dean/departments/${department.departmentId}?semesterId=${filters.semesterId}&academicYear=${encodeURIComponent(filters.academicYear)}`);
                     }
                   },
-                  scales: { y: { min: 0, max: 100 } },
+                  scales: { 
+                    x: {
+                      ticks: {
+                        callback: function(value) {
+                          let label = this.getLabelForValue(value);
+                          if (label.startsWith("Department of ")) {
+                            label = label.replace("Department of ", "");
+                          }
+                          return label.length > 15 ? label.substring(0, 15) + "..." : label;
+                        }
+                      }
+                    },
+                    y: { min: 0, max: 100 } 
+                  },
                 }}
               />
             )}

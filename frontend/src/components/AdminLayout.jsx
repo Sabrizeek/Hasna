@@ -1,33 +1,36 @@
+import { useState } from "react";
 import Sidebar from "./Sidebar.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
-import NotificationBell from "./NotificationBell.jsx";
+import TopHeader from "./TopHeader.jsx";
 import ProfileAvatarButton from "./ProfileAvatarButton.jsx";
 import SiteFooter from "./SiteFooter.jsx";
 
 const AdminLayout = ({ title, children }) => {
   const { user, logout } = useAuth();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-brandBg lg:flex">
-      <Sidebar />
+    <div className="min-h-screen overflow-x-hidden bg-brandBg">
+      {/* Sidebar (handles its own mobile overlay/drawer) */}
+      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+
+      {/* Main content – offset on desktop */}
       <main className="min-w-0 flex-1 overflow-x-hidden lg:ml-72">
-        <div className="fixed inset-x-0 top-0 z-50 border-b border-slate-200 bg-white px-4 py-4 shadow-sm sm:px-6 lg:left-72 lg:px-8">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <p className="text-xs uppercase tracking-[0.3em] text-brandGold">Lecturer Evaluation System</p>
-              <h2 className="text-2xl font-bold text-brandBlue">{title}</h2>
-            </div>
-            <div className="flex items-center gap-3">
-              <NotificationBell accent="text-brandGold" />
-              <span className="text-sm text-slate-600">{user?.full_name}</span>
-              <ProfileAvatarButton user={user} to="/admin/profile" fallback="AD" className="bg-brandBlue" />
-              <button onClick={logout} className="rounded-full bg-brandBlue px-4 py-2 text-sm font-semibold text-white transition hover:opacity-90">
-                Logout
-              </button>
-            </div>
-          </div>
+        <TopHeader
+          title="Admin Portal"
+          user={user}
+          logout={logout}
+          setSidebarOpen={setSidebarOpen}
+          profileTo="/admin/profile"
+          avatarFallback="AD"
+          avatarColor="bg-brandBlue"
+          notificationAccent="text-brandGold"
+        />
+
+        {/* Page content */}
+        <div className="min-w-0 overflow-x-hidden p-4 pt-20 sm:p-6 sm:pt-20 lg:p-8 lg:pt-20">
+          {children}
         </div>
-        <div className="min-w-0 overflow-x-hidden p-4 pt-28 sm:p-6 sm:pt-28 lg:p-8 lg:pt-28">{children}</div>
         <SiteFooter compact />
       </main>
     </div>
