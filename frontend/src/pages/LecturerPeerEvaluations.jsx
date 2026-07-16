@@ -188,7 +188,7 @@ const LecturerPeerEvaluations = () => {
                         {assignment.assignment_status === "completed" && assignment.upload_status !== "rejected" ? (
                           <div className="flex flex-col gap-2">
                             <a
-                              href={`${(import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api').replace('/api', '')}/${assignment.file_path?.replace(/\\/g, '/')}`}
+                              href={`${(import.meta.env.VITE_API_BASE_URL || `http://${window.location.hostname}:5000/api`).replace('/api', '')}/${assignment.file_path?.replace(/\\/g, '/')}`}
                               target="_blank"
                               rel="noreferrer"
                               className="block rounded-full border border-emerald-500 px-4 py-1.5 text-center text-xs font-semibold text-emerald-600 transition hover:bg-emerald-500 hover:text-white"

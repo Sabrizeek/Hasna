@@ -151,7 +151,7 @@ const LecturerSupervisionReports = () => {
             <h2 className="mt-3 text-3xl font-bold text-slate-950">Upload and Track Reports</h2>
           </div>
           <a
-            href={`${import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api"}/supervision-template`}
+            href={`${import.meta.env.VITE_API_BASE_URL || `http://${window.location.hostname}:5000/api`}/supervision-template`}
             className="rounded-2xl bg-sky-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-sky-800"
           >
             Download Report Template

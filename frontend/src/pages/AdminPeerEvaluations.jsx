@@ -487,7 +487,7 @@ const AdminPeerEvaluations = () => {
                           <td className="py-4 whitespace-nowrap text-right">
                             <div className="flex items-center justify-end gap-2">
                               <a
-                                href={`${(import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api').replace('/api', '')}/${upload.file_path?.replace(/\\/g, '/')}`}
+                                href={`${(import.meta.env.VITE_API_BASE_URL || `http://${window.location.hostname}:5000/api`).replace('/api', '')}/${upload.file_path?.replace(/\\/g, '/')}`}
                                 target="_blank"
                                 rel="noreferrer"
                                 className="rounded-full border border-emerald-500 px-4 py-1.5 text-xs font-semibold text-emerald-600 transition hover:bg-emerald-500 hover:text-white"

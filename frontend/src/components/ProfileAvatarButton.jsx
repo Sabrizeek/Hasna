@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 
-const apiBase = import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
+const apiBase = import.meta.env.VITE_API_BASE_URL || `http://${window.location.hostname}:5000/api`;
 const serverBase = apiBase.replace(/\/api\/?$/, "");
 
 const initialsFromName = (name = "", fallback = "U") => {

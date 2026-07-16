@@ -241,7 +241,7 @@ const AdminActivityReports = () => {
             <div className="mt-6 space-y-4">
               <div className="flex flex-col sm:flex-row gap-3">
                 <a
-                  href={`${(import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api').replace('/api', '')}/${selectedReport.file_path?.replace(/\\/g, '/')}`}
+                  href={`${(import.meta.env.VITE_API_BASE_URL || `http://${window.location.hostname}:5000/api`).replace('/api', '')}/${selectedReport.file_path?.replace(/\\/g, '/')}`}
                   target="_blank"
                   rel="noreferrer"
                   className="flex-1 rounded-2xl border-2 border-brandBlue px-4 py-3 text-center text-sm font-bold text-brandBlue transition hover:bg-brandBlue hover:text-white"
