@@ -179,7 +179,7 @@ const LecturerSupervisionReports = () => {
               />
               <span className="block text-xs text-slate-500">PDF, DOC, or DOCX. Maximum 10MB.</span>
             </label>
-            <label className="space-y-2">
+            <div className="space-y-2">
               <span className="text-sm font-semibold text-slate-700">Report Type</span>
               <SearchableSelect
                 value={reportType}
@@ -193,9 +193,9 @@ const LecturerSupervisionReports = () => {
                   { value: "other", label: "Other" },
                 ]}
               />
-            </label>
+            </div>
             {reportType === "other" && (
-              <label className="space-y-2">
+              <div className="space-y-2">
                 <span className="text-sm font-semibold text-slate-700">Category</span>
                 <SearchableSelect
                   value={otherCategory}
@@ -207,7 +207,7 @@ const LecturerSupervisionReports = () => {
                     { value: "academic_coordinator", label: "Academic Coordinator" },
                   ]}
                 />
-              </label>
+              </div>
             )}
           </div>
 
