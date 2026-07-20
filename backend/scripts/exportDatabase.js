@@ -6,7 +6,7 @@ import { findMysqlExecutable } from "./mysqlCli.js";
 
 dotenv.config();
 
-const backupDir = path.resolve("backups");
+const backupDir = path.resolve("../database/backups");
 const backupFile = path.join(backupDir, "les-database.sql");
 
 const {
